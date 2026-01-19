@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Book Store{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>📚 Book Store</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/">Trang chủ</a></li>
+                <li><a href="/books/">Sách</a></li>
+                <li><a href="/cart/">Giỏ hàng</a></li>
+                {% if request.session.customer_id %}
+                <li><a href="{% url 'logout' %}">Đăng xuất ({{ request.session.customer_name }})</a></li>
+                {% else %}
+                <li><a href="{% url 'register' %}">Đăng ký</a></li>
+                <li><a href="{% url 'login' %}">Đăng nhập</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% if messages %}
+        <div class="container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Book Store. Được tạo bởi Django với ❤️</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+
+</html>

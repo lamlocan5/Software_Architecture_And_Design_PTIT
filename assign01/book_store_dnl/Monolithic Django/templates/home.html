@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Chào mừng đến Book Store{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1>📚 Chào mừng đến Book Store</h1>
+        <p>Khám phá thế giới sách đa dạng và phong phú</p>
+        <a href="/books/" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">
+            Khám phá ngay
+        </a>
+    </div>
+</div>
+
+<div class="container" style="margin-top: 4rem;">
+    <div class="grid grid-3">
+        <div class="card" style="text-align: center;">
+            <h3 style="font-size: 3rem; margin-bottom: 1rem;">📖</h3>
+            <h4>Sách đa dạng</h4>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Hàng nghìn đầu sách từ nhiều thể loại khác nhau
+            </p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <h3 style="font-size: 3rem; margin-bottom: 1rem;">🚚</h3>
+            <h4>Giao hàng nhanh</h4>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Miễn phí vận chuyển cho đơn hàng từ 200.000đ
+            </p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <h3 style="font-size: 3rem; margin-bottom: 1rem;">💯</h3>
+            <h4>Chất lượng đảm bảo</h4>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Sách chính hãng, đổi trả trong vòng 7 ngày
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

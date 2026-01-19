@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3 text-center">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Welcome to Version C</h1>
+        <p class="col-md-8 fs-4 mx-auto">This is the Microservices implementation (Frontend Gateway).</p>
+        <a class="btn btn-primary btn-lg" href="{% url 'book_list' %}" role="button">Browse Books</a>
+    </div>
+</div>
+{% endblock %}

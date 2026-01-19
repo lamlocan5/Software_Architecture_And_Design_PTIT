@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng ký - Book Store{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>✨ Đăng ký tài khoản</h2>
+        <p>Tạo tài khoản để bắt đầu mua sắm</p>
+    </div>
+
+    <div style="max-width: 500px; margin: 0 auto;">
+        <div class="card">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="name">Họ và tên</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Đăng ký</button>
+            </form>
+            <p style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary);">
+                Đã có tài khoản? <a href="/login/" style="color: var(--primary-color);">Đăng nhập</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

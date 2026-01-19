@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3 text-center">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Welcome to Version B</h1>
+        <p class="col-md-8 fs-4 mx-auto">This is a cleaner implementation of the Book Store using Clean Architecture
+            principles.</p>
+        <a class="btn btn-primary btn-lg" href="{% url 'book_list' %}" role="button">Browse Books</a>
+    </div>
+</div>
+
+<div class="row align-items-md-stretch">
+    <div class="col-md-6">
+        <div class="h-100 p-5 text-bg-dark rounded-3">
+            <h2>Clean Architecture</h2>
+            <p>Separation of concerns using Domain, Use Cases, Interfaces, and Infrastructure layers.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="h-100 p-5 bg-body-tertiary border rounded-3">
+            <h2>Shared Database</h2>
+            <p>Seamlessly integrated with existing Monolith data via shared MySQL database.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

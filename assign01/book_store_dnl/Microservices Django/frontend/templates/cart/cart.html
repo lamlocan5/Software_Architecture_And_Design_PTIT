@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Cart - Microservices Store{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Shopping Cart</h1>
+
+{% if cart.items %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Price</th>
+                        <th>Qty</th>
+                        <th>Subtotal</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart.items %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'book_detail' item.book_id %}" class="text-decoration-none fw-bold">
+                                {{ item.book_title }}
+                            </a>
+                        </td>
+                        <td>${{ item.book_price }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ item.subtotal|floatformat:2 }}</td>
+                        <td>
+                            <form action="{% url 'remove_from_cart' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="book_id" value="{{ item.id }}">
+                                <!-- CHANGED: Passing item.id as book_id param for view -->
+                                <input type="hidden" name="item_id" value="{{ item.id }}"> <!-- Proper naming -->
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Items:</span>
+                    <span>{{ item_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold fs-5">
+                    <span>Total:</span>
+                    <span>${{ total|floatformat:2 }}</span>
+                </div>
+                <hr>
+                <div class="d-grid">
+                    <button class="btn btn-success btn-lg">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info text-center py-5">
+    <h4>Your cart is empty</h4>
+    <p>Go add some books!</p>
+    <a href="{% url 'book_list' %}" class="btn btn-primary">Browse Books</a>
+</div>
+{% endif %}
+{% endblock %}

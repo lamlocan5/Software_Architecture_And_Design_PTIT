@@ -1,0 +1,90 @@
+:root {
+    --primary-color: #4f46e5;
+    /* Indigo 600 - slightly darker/vibrant */
+    --primary-hover: #4338ca;
+    /* Indigo 700 */
+    --secondary-color: #8b5cf6;
+    --bg-body: #f8fafc;
+    /* Slate 50 */
+    --card-bg: #ffffff;
+    --text-main: #0f172a;
+    /* Slate 900 - Very dark for sharpness */
+    --text-muted: #475569;
+    /* Slate 600 - Darker gray for readability */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --radius-lg: 0.75rem;
+}
+
+body {
+    background-color: var(--bg-body);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+    padding-top: 5rem;
+}
+
+.navbar {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: var(--shadow-sm);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: var(--primary-color) !important;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    color: var(--text-muted) !important;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+    color: var(--primary-color) !important;
+}
+
+.card {
+    background: var(--card-bg);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.page-header h2 {
+    color: var(--primary-color);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}

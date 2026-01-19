@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Giỏ hàng - Book Store{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>🛒 Giỏ hàng của bạn</h2>
+        <p>Quản lý các mục bạn muốn mua</p>
+    </div>
+
+    {% if cart_items %}
+    <div class="card">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Sách</th>
+                    <th>Tác giả</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>{{ item.book.title }}</td>
+                    <td>{{ item.book.author }}</td>
+                    <td>{{ item.book.price|floatformat:0 }}đ</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.subtotal|floatformat:0 }}đ</td>
+                    <td>
+                        <form method="POST" action="/cart/remove/" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_id" value="{{ item.id }}">
+                            <button type="submit" class="btn btn-danger">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="cart-total">
+            Tổng cộng: {{ total|floatformat:0 }}đ
+        </div>
+        <div style="text-align: right; margin-top: 1rem;">
+            <a href="/books/" class="btn btn-secondary" style="margin-right: 1rem;">Tiếp tục mua sắm</a>
+            <button class="btn btn-primary">Thanh toán</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="text-align: center; padding: 3rem;">
+        <h3>Giỏ hàng trống</h3>
+        <p style="color: var(--text-secondary); margin: 1rem 0;">
+            Bạn chưa thêm sản phẩm nào vào giỏ hàng.
+        </p>
+        <a href="/books/" class="btn btn-primary">Khám phá sách ngay</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
