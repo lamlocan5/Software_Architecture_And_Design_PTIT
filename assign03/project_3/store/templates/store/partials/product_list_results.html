@@ -1,0 +1,29 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {% for book in books %}
+        <a href="{% url 'store:product_detail' book.pk %}" class="group bg-white rounded-xl shadow border border-gray-100 overflow-hidden hover:shadow-lg transition">
+            {% if book.cover_image %}
+                <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-full h-48 object-cover group-hover:scale-105 transition duration-200">
+            {% else %}
+                <div class="w-full h-48 bg-slate-200 flex items-center justify-center text-slate-500 text-4xl">📖</div>
+            {% endif %}
+            <div class="p-4">
+                <h2 class="font-semibold text-slate-800 group-hover:text-amber-600">{{ book.title }}</h2>
+                <p class="text-sm text-gray-600">{{ book.author.name|default:"—" }}</p>
+                <p class="text-amber-600 font-bold mt-1">${{ book.price }}</p>
+            </div>
+        </a>
+    {% empty %}
+        <p class="col-span-full text-gray-500 py-8 text-center">No books found.</p>
+    {% endfor %}
+</div>
+{% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Previous</a>
+        {% endif %}
+        <span class="px-3 py-1">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Next</a>
+        {% endif %}
+    </div>
+{% endif %}

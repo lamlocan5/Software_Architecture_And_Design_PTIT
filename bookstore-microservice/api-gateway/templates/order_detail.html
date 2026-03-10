@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng #{{ order.id }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/orders/" class="text-decoration-none">Đơn hàng</a></li>
+        <li class="breadcrumb-item active fw-semibold">Đơn #{{ order.id }}</li>
+    </ol>
+</nav>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Thông tin đơn hàng -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white">Thông tin đơn hàng</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted small">Mã đơn:</dt>
+                    <dd class="col-7"><span class="badge bg-secondary fs-6">#{{ order.id }}</span></dd>
+
+                    <dt class="col-5 text-muted small">Khách hàng:</dt>
+                    <dd class="col-7 fw-semibold">
+                        {% if order.customer %}{{ order.customer.name }}
+                        {% else %}#{{ order.customer_id }}{% endif %}
+                    </dd>
+
+                    <dt class="col-5 text-muted small">Ngày đặt:</dt>
+                    <dd class="col-7 small">{{ order.created_at|slice:":10" }}</dd>
+
+                    <dt class="col-5 text-muted small">Tổng tiền:</dt>
+                    <dd class="col-7">
+                        <strong class="text-success fs-5">{{ order.total_amount|floatformat:0 }} ₫</strong>
+                    </dd>
+
+                    <dt class="col-5 text-muted small">Trạng thái:</dt>
+                    <dd class="col-7">
+                        {% if order.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                        {% elif order.status == 'confirmed' %}
+                            <span class="badge bg-info text-dark">Đã xác nhận</span>
+                        {% elif order.status == 'shipping' %}
+                            <span class="badge bg-primary">Đang giao</span>
+                        {% elif order.status == 'delivered' %}
+                            <span class="badge bg-success">Đã giao</span>
+                        {% elif order.status == 'cancelled' %}
+                            <span class="badge bg-danger">Đã huỷ</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Cập nhật trạng thái: admin / staff / manager -->
+        {% if is_admin or is_staff_role or is_manager_role %}
+        <div class="card">
+            <div class="card-header" style="background:#fff3cd; color:#664d03;">
+                Cập nhật trạng thái
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Trạng thái mới</label>
+                        <select name="status" class="form-select">
+                            {% for s in status_choices %}
+                            <option value="{{ s }}" {% if s == order.status %}selected{% endif %}>
+                                {% if s == 'pending' %}Chờ xác nhận
+                                {% elif s == 'confirmed' %}Đã xác nhận
+                                {% elif s == 'shipping' %}Đang giao
+                                {% elif s == 'delivered' %}Đã giao
+                                {% elif s == 'cancelled' %}Đã huỷ
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-semibold text-dark">Cập nhật</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chi tiết sản phẩm -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Sản phẩm trong đơn</span>
+                <span class="badge bg-secondary">{{ order.items|length }} sản phẩm</span>
+            </div>
+            <div class="card-body p-0">
+                {% if order.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tên sách</th>
+                                <th>Tác giả</th>
+                                <th>Đơn giá lúc đặt</th>
+                                <th style="width:80px;">SL</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in order.items %}
+                            <tr>
+                                <td class="fw-semibold">
+                                    {% if item.book %}{{ item.book.title }}
+                                    {% else %}Book #{{ item.book_id }}{% endif %}
+                                </td>
+                                <td class="text-muted small">
+                                    {% if item.book %}{{ item.book.author }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-muted small">
+                                    {{ item.price_at_order|floatformat:0 }} ₫
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ item.quantity }}</span>
+                                </td>
+                                <td>
+                                    <strong class="text-success">
+                                        {{ item.price_at_order|floatformat:0 }} ₫
+                                    </strong>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Tổng cộng:</td>
+                                <td><strong class="text-primary fs-5">{{ order.total_amount|floatformat:0 }} ₫</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state text-center">
+                    <p>Không có sản phẩm nào trong đơn hàng này.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-3">
+            <a href="/orders/" class="btn btn-outline-secondary">Quay lại danh sách đơn hàng</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

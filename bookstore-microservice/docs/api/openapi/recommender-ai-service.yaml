@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Recommender AI Service API
+  version: 1.0.0
+  description: |
+    Service gợi ý sách dùng Gemini. Gateway gửi danh sách sách, service trả về danh sách ID được gợi ý.
+servers:
+  - url: http://recommender-ai-service:8000
+paths:
+  /recommendations/:
+    post:
+      summary: Sinh danh sách gợi ý sách
+      tags: [Recommendations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                books:
+                  description: Danh sách sách (lấy từ catalogue-service) để model chọn ra subset.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      title: { type: string }
+                      author: { type: string }
+                      price: { type: number, format: float }
+                      stock: { type: integer }
+                      publisher: { type: string, nullable: true }
+                      avg_rating: { type: number }
+                      total_reviews: { type: integer }
+                limit:
+                  type: integer
+                  default: 6
+                context:
+                  type: string
+                  enum: [home, catalogue]
+                  default: home
+              required: [books]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommended_ids:
+                    type: array
+                    items:
+                      type: integer
+                  source:
+                    type: string
+                    enum: [gemini, fallback]
+

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Quản lý Staff{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Quản lý Staff</h2>
+        <p class="text-muted mb-0">Tạo và xem danh sách nhân viên</p>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4" role="alert">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#e7f1ff; color:#0a58ca;">
+                Tạo tài khoản staff (đăng nhập)
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Họ tên</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Nguyễn Văn Staff" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="staff@email.com" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Mật khẩu</label>
+                        <input type="password" name="password" class="form-control" placeholder="Ít nhất 6 ký tự" minlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">Tạo staff</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Danh sách staff</span>
+                <span class="badge bg-secondary fs-6">{{ staff|length }} người</span>
+            </div>
+            <div class="card-body p-0">
+                {% if staff %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60px;">ID</th>
+                                <th>Họ tên</th>
+                                <th>Email</th>
+                                <th style="width:90px;">Active</th>
+                                <th style="width:150px;">Tài khoản</th>
+                                <th style="width:90px;">Sửa</th>
+                                <th style="width:80px;">Xoá</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for s in staff %}
+                            <tr>
+                                <td><span class="badge bg-light text-dark border">{{ s.id }}</span></td>
+                                <td class="fw-semibold">{{ s.name }}</td>
+                                <td class="text-muted">{{ s.email }}</td>
+                                <td>
+                                    {% if s.active %}
+                                    <span class="badge bg-success">ON</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">OFF</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        {% if s.login_active %}
+                                            <span class="badge bg-success">LOGIN ON</span>
+                                            <form method="POST" class="m-0">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="toggle_active">
+                                                <input type="hidden" name="staff_id" value="{{ s.id }}">
+                                                <input type="hidden" name="email" value="{{ s.email }}">
+                                                <input type="hidden" name="active" value="0">
+                                                <button class="btn btn-sm btn-outline-danger">Vô hiệu</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="badge bg-secondary">LOGIN OFF</span>
+                                            <form method="POST" class="m-0">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="toggle_active">
+                                                <input type="hidden" name="staff_id" value="{{ s.id }}">
+                                                <input type="hidden" name="email" value="{{ s.email }}">
+                                                <input type="hidden" name="active" value="1">
+                                                <button class="btn btn-sm btn-outline-success">Kích hoạt</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            onclick="openEditStaffModal({{ s.id }}, '{{ s.name|escapejs }}', '{{ s.email|escapejs }}')">
+                                        ✏️ Sửa
+                                    </button>
+                                </td>
+                                <td>
+                                    <form method="POST" class="m-0" onsubmit="return confirm('Xoá staff này? Tài khoản đăng nhập cũng sẽ bị vô hiệu.');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="staff_id" value="{{ s.id }}">
+                                        <input type="hidden" name="email" value="{{ s.email }}">
+                                        <button class="btn btn-sm btn-outline-danger">🗑</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state text-center">
+                    <p class="fw-semibold">Chưa có staff nào</p>
+                    <p class="small">Hãy tạo staff đầu tiên bằng form bên trái.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Staff -->
+<div class="modal fade" id="editStaffModal" tabindex="-1" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#e7f1ff; color:#0a58ca;">
+        <h5 class="modal-title fw-bold" id="editStaffModalLabel">✏️ Chỉnh sửa Staff</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="staff_id" id="edit_staff_id" value="">
+        <input type="hidden" name="old_email" id="edit_staff_old_email" value="">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Họ tên</label>
+            <input type="text" name="name" id="edit_staff_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Email</label>
+            <input type="email" name="email" id="edit_staff_email" class="form-control" required>
+          </div>
+          <div class="mb-1">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Đặt lại mật khẩu (tuỳ chọn)</label>
+            <input type="password" name="new_password" class="form-control" placeholder="Bỏ trống nếu không đổi" minlength="6">
+            <div class="form-text">Nếu nhập mật khẩu mới, user sẽ phải dùng mật khẩu này để đăng nhập lần sau.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+          <button type="submit" class="btn btn-primary">💾 Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEditStaffModal(id, name, email) {
+  document.getElementById('edit_staff_id').value = id;
+  document.getElementById('edit_staff_old_email').value = email;
+  document.getElementById('edit_staff_name').value = name;
+  document.getElementById('edit_staff_email').value = email;
+  var modal = new bootstrap.Modal(document.getElementById('editStaffModal'));
+  modal.show();
+}
+</script>
+{% endblock %}
+

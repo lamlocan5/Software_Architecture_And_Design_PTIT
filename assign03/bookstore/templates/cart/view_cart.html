@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Your Shopping Cart</h1>
+
+    {% if cart.items.all %}
+    <div
+        style="background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 1rem;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--background); text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 1rem;">Product</th>
+                    <th style="padding: 1rem;">Price</th>
+                    <th style="padding: 1rem;">Quantity</th>
+                    <th style="padding: 1rem;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart.items.all %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 1rem;">
+                        <strong>{{ item.book.title }}</strong><br>
+                        <span style="color: gray; font-size: 0.9rem;">{{ item.book.authors.all|join:", " }}</span>
+                    </td>
+                    <td style="padding: 1rem;">${{ item.price }}</td>
+                    <td style="padding: 1rem;">{{ item.quantity }}</td>
+                    <td style="padding: 1rem;">${% widthratio item.price 1 item.quantity %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right; padding: 1rem; font-weight: bold;">Grand Total:</td>
+                    <td style="padding: 1rem; font-weight: bold; font-size: 1.2rem; color: var(--primary-color);">
+                        ${{ cart.total_price }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: right;">
+        <a href="{% url 'book_list' %}"
+            style="text-decoration: none; margin-right: 1rem; color: var(--text-primary);">Continue Shopping</a>
+        <a href="{% url 'checkout' %}" class="btn-primary" style="text-decoration: none;">Proceed to Checkout</a>
+    </div>
+
+    {% else %}
+    <div style="text-align: center; padding: 3rem;">
+        <p style="font-size: 1.2rem; color: gray;">Your cart is empty.</p>
+        <a href="{% url 'book_list' %}" class="btn-primary"
+            style="margin-top: 1rem; display: inline-block; text-decoration: none;">Start Shopping</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

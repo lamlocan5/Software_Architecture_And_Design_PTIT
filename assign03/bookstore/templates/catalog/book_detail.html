@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="book-detail">
+        <div class="book-cover-placeholder">
+            <span>No Image Available</span>
+        </div>
+        <div class="detail-info">
+            <h1>{{ book.title }}</h1>
+            <div class="meta-info">
+                <p><strong>Author(s):</strong> {{ book.authors.all|join:", " }}</p>
+                <p><strong>Publisher:</strong> {{ book.publisher.name }}</p>
+                <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+                <p><strong>Category:</strong> {{ book.categories.all|join:", " }}</p>
+            </div>
+
+            <div class="book-price" style="font-size: 2rem; margin-bottom: 1.5rem;">${{ book.price }}</div>
+
+            <p class="description">{{ book.description }}</p>
+
+            <div style="margin-top: 2rem;">
+                <!-- Form action will be updated when cart app is ready -->
+                <form action="{% url 'add_to_cart' book.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary btn-block" style="max-width: 200px;">Add to Cart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

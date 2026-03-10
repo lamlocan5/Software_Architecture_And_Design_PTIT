@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Nhà xuất bản{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Quản lý Nhà xuất bản</h2>
+        <p class="text-muted mb-0">Thêm và xem danh sách nhà xuất bản</p>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4" role="alert">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Form thêm nhà xuất bản -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#e7f1ff; color:#0a58ca;">
+                Thêm nhà xuất bản mới
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Tên nhà xuất bản</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: NXB Trẻ" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Địa chỉ</label>
+                        <input type="text" name="address" class="form-control" placeholder="Ví dụ: 161B Lý Chính Thắng, TP.HCM">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Email</label>
+                        <input type="email" name="mail" class="form-control" placeholder="Ví dụ: contact@nxbtre.vn" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">Thêm nhà xuất bản</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh sách nhà xuất bản -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Danh sách nhà xuất bản</span>
+                <span class="badge bg-secondary fs-6">{{ publishers|length }} NXB</span>
+            </div>
+            <div class="card-body p-0">
+                {% if publishers %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50px;">ID</th>
+                                <th>Tên NXB</th>
+                                <th>Địa chỉ</th>
+                                <th>Email</th>
+                                <th style="width:70px;">Sách</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for pub in publishers %}
+                            <tr>
+                                <td><span class="badge bg-light text-dark border">{{ pub.id }}</span></td>
+                                <td class="fw-semibold">{{ pub.name }}</td>
+                                <td class="text-muted small">{{ pub.address|default:"—" }}</td>
+                                <td class="small">
+                                    <a href="mailto:{{ pub.mail }}" class="text-decoration-none">{{ pub.mail }}</a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info text-dark">{{ pub.books|length }}</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state text-center">
+                    <p class="fw-semibold">Chưa có nhà xuất bản nào</p>
+                    <p class="small">Hãy thêm nhà xuất bản đầu tiên bằng form bên trái!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Giỏ hàng - Bookstore{% endblock %}
+
+{% block content %}
+<h1>Giỏ hàng của bạn</h1>
+
+{% if cart_items %}
+<table style="width: 100%; border-collapse: collapse; margin: 2rem 0;">
+    <thead>
+        <tr style="background: #f8f9fa;">
+            <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Sách</th>
+            <th style="padding: 1rem; text-align: center; border-bottom: 2px solid #ddd;">Giá</th>
+            <th style="padding: 1rem; text-align: center; border-bottom: 2px solid #ddd;">Số lượng</th>
+            <th style="padding: 1rem; text-align: center; border-bottom: 2px solid #ddd;">Tổng</th>
+            <th style="padding: 1rem; text-align: center; border-bottom: 2px solid #ddd;">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in cart_items %}
+        <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 1rem;">
+                <strong>{{ item.book.title }}</strong><br>
+                <small style="color: #666;">{{ item.book.authors.all|join:", " }}</small>
+            </td>
+            <td style="padding: 1rem; text-align: center;">{{ item.book.price|floatformat:0 }} VNĐ</td>
+            <td style="padding: 1rem; text-align: center;">
+                <form method="POST" action="{% url 'update_cart' item.cart_id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.book.stock }}"
+                        style="width: 60px; padding: 0.25rem;">
+                    <button type="submit"
+                        style="padding: 0.25rem 0.5rem; background: #007bff; color: white; border: none; cursor: pointer;">Cập
+                        nhật</button>
+                </form>
+            </td>
+            <td style="padding: 1rem; text-align: center; font-weight: bold;">{{ item.subtotal|floatformat:0 }} VNĐ</td>
+            <td style="padding: 1rem; text-align: center;">
+                <a href="{% url 'remove_from_cart' item.cart_id %}" style="color: #dc3545; text-decoration: none;">🗑️
+                    Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="max-width: 400px; margin-left: auto; border: 1px solid #ddd; padding: 1.5rem; border-radius: 8px;">
+    <h3>Tổng đơn hàng</h3>
+    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
+        <span>Tạm tính:</span>
+        <span>{{ subtotal|floatformat:0 }} VNĐ</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
+        <span>Phí vận chuyển:</span>
+        <span>{{ shipping_cost|floatformat:0 }} VNĐ</span>
+    </div>
+    <div
+        style="display: flex; justify-content: space-between; margin: 1rem 0; font-size: 1.3rem; font-weight: bold; border-top: 2px solid #ddd; padding-top: 1rem;">
+        <span>Tổng cộng:</span>
+        <span style="color: #007bff;">{{ total|floatformat:0 }} VNĐ</span>
+    </div>
+    <a href="{% url 'checkout' %}"
+        style="display: block; text-align: center; padding: 1rem; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 1rem;">Thanh
+        toán</a>
+</div>
+{% else %}
+<p style="text-align: center; padding: 3rem; color: #666;">Giỏ hàng của bạn đang trống.</p>
+<div style="text-align: center;">
+    <a href="{% url 'book_list' %}"
+        style="padding: 1rem 2rem; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">Tiếp
+        tục mua sắm</a>
+</div>
+{% endif %}
+{% endblock %}

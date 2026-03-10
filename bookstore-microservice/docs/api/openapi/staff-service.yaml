@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Staff Service API
+  version: 1.0.0
+  description: Quản lý hồ sơ nhân viên (staff).
+servers:
+  - url: http://staff-service:8000
+paths:
+  /staff/:
+    get:
+      summary: Danh sách staff
+      tags: [Staff]
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Tạo staff mới
+      tags: [Staff]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '201':
+          description: Created
+  /staff/{id}/:
+    patch:
+      summary: Cập nhật một phần hồ sơ staff
+      tags: [Staff]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Xoá staff
+      tags: [Staff]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+    Staff:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required: [name, email]
+

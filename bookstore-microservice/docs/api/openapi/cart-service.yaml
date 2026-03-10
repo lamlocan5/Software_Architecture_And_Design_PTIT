@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Cart Service API
+  version: 1.0.0
+  description: Quản lý giỏ hàng và các item trong giỏ.
+servers:
+  - url: http://cart-service:8000
+paths:
+  /carts/:
+    post:
+      summary: Tạo giỏ hàng cho customer
+      tags: [Carts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: integer
+              required: [customer_id]
+      responses:
+        '201':
+          description: Created
+  /carts/add-item/:
+    post:
+      summary: Thêm item vào giỏ
+      tags: [Carts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cart:
+                  type: integer
+                book_id:
+                  type: integer
+                quantity:
+                  type: integer
+              required: [cart, book_id, quantity]
+      responses:
+        '200':
+          description: OK
+  /carts/{customer_id}/:
+    get:
+      summary: Xem chi tiết giỏ hàng (items) theo customer_id
+      tags: [Carts]
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /carts/customer/{customer_id}/:
+    get:
+      summary: Lấy thông tin giỏ (id) theo customer_id
+      tags: [Carts]
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+

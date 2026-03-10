@@ -1,0 +1,23 @@
+{% extends "store/base.html" %}
+{% block title %}Books – Bookstore{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-800 mb-4">Books</h1>
+    <form method="get" action="{% url 'store:product_list' %}" class="flex gap-2 max-w-md"
+          hx-get="{% url 'store:product_list' %}"
+          hx-trigger="keyup from:#search-input delay:300ms, search from:#search-input"
+          hx-target="#product-list-container"
+          hx-include="#search-input"
+          hx-push-url="true">
+        {% csrf_token %}
+        <input type="search" name="q" id="search-input" value="{{ search_query }}"
+               placeholder="Search by title or author…"
+               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+        <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-700">Search</button>
+    </form>
+</div>
+
+<div id="product-list-container">
+    {% include "store/partials/product_list_results.html" %}
+</div>
+{% endblock %}

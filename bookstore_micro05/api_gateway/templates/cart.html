@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Cart | BookStore</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #f472b6, #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .nav a {
+            padding: 8px 20px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav a.active {
+            background: linear-gradient(90deg, #f472b6, #fb923c);
+            color: #fff;
+        }
+
+        .nav a:not(.active) {
+            border: 1px solid #475569;
+            color: #94a3b8;
+        }
+
+        .nav a:not(.active):hover {
+            border-color: #f472b6;
+            color: #f472b6;
+        }
+
+        .cart-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .cart-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cart-item:hover {
+            transform: translateX(4px);
+            border-color: rgba(244, 114, 182, 0.4);
+            box-shadow: 0 4px 24px rgba(244, 114, 182, 0.15);
+        }
+
+        .item-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .item-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f472b6, #fb923c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .item-info .book-id {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .item-info .book-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .qty-badge {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 8px 18px;
+            border-radius: 999px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #475569;
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🛒 My Cart</h1>
+            <p>Your selected books</p>
+        </header>
+
+        <nav class="nav">
+            <a href="/books/">📖 Books</a>
+            <a href="/cart/1/" class="active">🛒 My Cart</a>
+        </nav>
+
+        {% if items %}
+        <div class="cart-list">
+            {% for item in items %}
+            <div class="cart-item">
+                <div class="item-left">
+                    <div class="item-icon">📗</div>
+                    <div class="item-info">
+                        <div class="book-id">Book #{{ item.book_id }}</div>
+                        <div class="book-label">Book ID</div>
+                    </div>
+                </div>
+                <div class="qty-badge">× {{ item.quantity }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">🛍️</div>
+            <p>Your cart is empty.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

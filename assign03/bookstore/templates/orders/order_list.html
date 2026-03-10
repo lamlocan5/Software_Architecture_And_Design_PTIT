@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 style="margin-bottom: 2rem;">My Orders</h1>
+
+    {% if orders %}
+    <div style="display: grid; gap: 1.5rem;">
+        {% for order in orders %}
+        <div class="card">
+            <div class="card-body">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    <div>
+                        <strong>Order #{{ order.id }}</strong>
+                        <span style="color: gray; font-size: 0.9rem; margin-left: 1rem;">
+                            {{ order.order_date|date:"F j, Y" }}</span>
+                    </div>
+                    <div class="badge"
+                        style="background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.85rem;">
+                        {{ order.status.name }}
+                    </div>
+                </div>
+
+                <div>
+                    <p><strong>Total:</strong> ${{ order.total_amount }}</p>
+                    <p><strong>Items:</strong></p>
+                    <ul style="padding-left: 1.5rem; margin-top: 0.5rem;">
+                        {% for item in order.items.all %}
+                        <li>{{ item.book.title }} x {{ item.quantity }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if order.shipment %}
+                    <p><strong>Shipping to:</strong> {{ order.shipment.address }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>You haven't placed any orders yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

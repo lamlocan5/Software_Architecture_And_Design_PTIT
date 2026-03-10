@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: Pay Service API
+  version: 1.0.0
+  description: Thanh toán cho đơn hàng.
+servers:
+  - url: http://pay-service:8000
+paths:
+  /payments/:
+    get:
+      summary: Danh sách tất cả payment
+      tags: [Payments]
+      responses:
+        '200':
+          description: OK
+  /payments/create/:
+    post:
+      summary: Tạo payment mới cho đơn hàng
+      tags: [Payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                customer_id:
+                  type: integer
+                amount:
+                  type: number
+                  format: float
+                method:
+                  type: string
+                  enum: [cod, bank, card, wallet]
+                provider:
+                  type: string
+                transaction_id:
+                  type: string
+              required: [order_id, customer_id, amount]
+      responses:
+        '201':
+          description: Created
+  /payments/{payment_id}/:
+    get:
+      summary: Xem chi tiết 1 payment
+      tags: [Payments]
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /payments/{payment_id}/status/:
+    patch:
+      summary: Cập nhật trạng thái payment
+      tags: [Payments]
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [initiated, paid, failed, refunded, cancelled]
+              required: [status]
+      responses:
+        '200':
+          description: Updated
+  /payments/order/{order_id}/:
+    get:
+      summary: Danh sách payment theo order
+      tags: [Payments]
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /payments/customer/{customer_id}/:
+    get:
+      summary: Danh sách payment theo customer
+      tags: [Payments]
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+

@@ -1,0 +1,54 @@
+{% extends "store/base.html" %}
+{% block title %}Checkout – Bookstore{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold text-slate-800 mb-6">Checkout</h1>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-xl shadow border border-gray-100 p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Shipping address</h2>
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label for="id_street" class="block text-sm font-medium text-gray-700 mb-1">Street</label>
+                    {{ form.street }}
+                    {% if form.street.errors %}<p class="text-red-600 text-sm mt-1">{{ form.street.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        {{ form.city }}
+                    </div>
+                    <div>
+                        <label for="id_country" class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                        {{ form.country }}
+                    </div>
+                </div>
+                <div>
+                    <label for="id_postal_code" class="block text-sm font-medium text-gray-700 mb-1">Postal code</label>
+                    {{ form.postal_code }}
+                </div>
+                <div>
+                    <label for="id_payment_method" class="block text-sm font-medium text-gray-700 mb-1">Payment method</label>
+                    {{ form.payment_method }}
+                </div>
+                <button type="submit" class="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-medium hover:bg-amber-400 transition mt-4">Place order</button>
+            </form>
+        </div>
+        <div class="bg-white rounded-xl shadow border border-gray-100 p-6 h-fit">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Order summary</h2>
+            <ul class="space-y-2 text-gray-700">
+                {% for book, quantity, subtotal in cart.get_items_with_subtotals %}
+                    <li class="flex justify-between">
+                        <span>{{ book.title }} × {{ quantity }}</span>
+                        <span>${{ subtotal }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between text-lg font-bold text-slate-800">
+                <span>Total</span>
+                <span>${{ cart.get_total_price }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Trang cá nhân{% endblock %}
+
+{% block content %}
+<!-- Chào mừng -->
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                 style="width:56px; height:56px; background: linear-gradient(135deg,#0d6efd,#6f42c1); font-size:1.4rem; flex-shrink:0;">
+                {{ request.user.first_name|slice:":1"|upper }}
+            </div>
+            <div>
+                <h3 class="fw-bold mb-0">Xin chào, {{ request.user.first_name }}!</h3>
+                <p class="text-muted mb-0 small">{{ request.user.email }} &nbsp;·&nbsp;
+                    <span class="badge bg-primary">Khách hàng</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-auto">
+        {% if user_customer_id %}
+        <a href="/cart/{{ user_customer_id }}/" class="btn btn-outline-primary">Giỏ hàng của tôi</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #0d6efd;">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0">{{ cart_count }}</h3>
+                <p class="text-muted small mb-0">Loại sách trong giỏ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #fd7e14;">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0">{{ order_count }}</h3>
+                <p class="text-muted small mb-0">Đơn hàng của tôi</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #198754;">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0">{{ book_count }}</h3>
+                <p class="text-muted small mb-0">Sách có trong cửa hàng</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Giỏ hàng -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>Giỏ hàng của tôi</span>
+                {% if user_customer_id %}
+                <a href="/cart/{{ user_customer_id }}/" class="btn btn-sm btn-light text-primary fw-semibold">Xem đầy đủ</a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if cart_items %}
+                <ul class="list-group list-group-flush">
+                {% for item in cart_items %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                        <div>
+                            <p class="mb-0 fw-semibold small">
+                                {% if item.book %}{{ item.book.title }}{% else %}Book #{{ item.book_id }}{% endif %}
+                            </p>
+                            <small class="text-muted">
+                                {% if item.book %}{{ item.book.price|floatformat:0 }}₫{% endif %}
+                            </small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">x{{ item.quantity }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+                {% if cart_total > 0 %}
+                <div class="p-3 border-top d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Tổng cộng:</span>
+                    <strong class="text-success">{{ cart_total|floatformat:0 }} ₫</strong>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <p class="mt-2 small">Giỏ hàng trống</p>
+                    <a href="/books/" class="btn btn-sm btn-primary">Xem sách ngay</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Đơn hàng gần đây -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <span>Đơn hàng của tôi</span>
+                <a href="/orders/" class="btn btn-sm btn-dark fw-semibold">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Đơn</th>
+                                <th>Ngày</th>
+                                <th>Trạng thái</th>
+                                <th>Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for order in orders|slice:":5" %}
+                            <tr style="cursor:pointer;" onclick="location.href='/orders/{{ order.id }}/'">
+                                <td><span class="badge bg-secondary">#{{ order.id }}</span></td>
+                                <td class="text-muted">{{ order.created_at|slice:":10" }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}<span class="badge bg-warning text-dark">Chờ</span>
+                                    {% elif order.status == 'confirmed' %}<span class="badge bg-info text-dark">Xác nhận</span>
+                                    {% elif order.status == 'shipping' %}<span class="badge bg-primary">Đang giao</span>
+                                    {% elif order.status == 'delivered' %}<span class="badge bg-success">Xong</span>
+                                    {% elif order.status == 'cancelled' %}<span class="badge bg-danger">Huỷ</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-semibold text-success">{{ order.total_amount|floatformat:0 }}₫</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <p class="mt-2 small">Chưa có đơn hàng nào</p>
+                    {% if user_customer_id %}
+                    <a href="/cart/{{ user_customer_id }}/" class="btn btn-sm btn-warning text-dark">Đặt hàng ngay</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Thao tác nhanh -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Thao tác nhanh</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a href="/books/" class="btn btn-outline-primary">Xem danh sách sách</a>
+                {% if user_customer_id %}
+                <a href="/cart/{{ user_customer_id }}/" class="btn btn-outline-success">Vào giỏ hàng</a>
+                {% endif %}
+                <a href="/orders/" class="btn btn-outline-warning">Đơn hàng của tôi</a>
+                <a href="/reviews/" class="btn btn-outline-warning">Viết đánh giá</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - Bookstore{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <div>
+        {% if book.cover_image %}
+        <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" style="width: 100%; border-radius: 8px;">
+        {% else %}
+        <div
+            style="width: 100%; height: 400px; background: #eee; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+            No Image</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <h1>{{ book.title }}</h1>
+        <p><strong>Tác giả:</strong> {% for author in authors %}{{ author.name }}{% if not forloop.last %}, {% endif
+            %}{% endfor %}</p>
+        <p><strong>Nhà xuất bản:</strong> {{ book.publisher.name }}</p>
+        <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+        <p><strong>Danh mục:</strong> {% for category in categories %}{{ category.name }}{% if not forloop.last %}, {%
+            endif %}{% endfor %}</p>
+        <p><strong>Ngày xuất bản:</strong> {{ book.published_date|date:"d/m/Y" }}</p>
+        <p><strong>Đánh giá:</strong> ⭐ {{ avg_rating }}/5 ({{ reviews.count }} đánh giá)</p>
+
+        <h2 style="color: #007bff; margin: 1rem 0;">{{ book.price|floatformat:0 }} VNĐ</h2>
+        <p><strong>Còn lại:</strong> {{ book.stock }} cuốn</p>
+
+        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <a href="{% url 'add_to_cart' book.book_id %}"
+                style="padding: 1rem 2rem; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">🛒
+                Thêm vào giỏ</a>
+            <a href="{% url 'add_to_wishlist' book.book_id %}"
+                style="padding: 1rem 2rem; background: #dc3545; color: white; text-decoration: none; border-radius: 4px;">❤️
+                Yêu thích</a>
+        </div>
+
+        <h3 style="margin-top: 2rem;">Mô tả</h3>
+        <p style="line-height: 1.8;">{{ book.description }}</p>
+    </div>
+</div>
+
+<div style="margin-top: 3rem;">
+    <h2>Đánh giá của khách hàng</h2>
+
+    {% if request.session.customer_id and not has_reviewed %}
+    <a href="{% url 'add_review' book.book_id %}"
+        style="display: inline-block; padding: 0.5rem 1rem; background: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 1rem 0;">✍️
+        Viết đánh giá</a>
+    {% endif %}
+
+    {% for review in reviews %}
+    <div style="border: 1px solid #ddd; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
+        <strong>{{ review.customer.username }}</strong> -
+        <span style="color: #ffa500;">{% for i in "12345" %}{% if forloop.counter <= review.rating %}⭐{% endif %}{%
+                endfor %}</span>
+                <span style="color: #666; font-size: 0.9rem;">{{ review.created_at|date:"d/m/Y H:i" }}</span>
+                <p style="margin-top: 0.5rem;">{{ review.comment }}</p>
+    </div>
+    {% empty %}
+    <p style="color: #666;">Chưa có đánh giá nào.</p>
+    {% endfor %}
+</div>
+{% endblock %}

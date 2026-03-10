@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: Ship Service API
+  version: 1.0.0
+  description: Vận chuyển (shipment) cho đơn hàng.
+servers:
+  - url: http://ship-service:8000
+paths:
+  /shipments/:
+    get:
+      summary: Danh sách shipment
+      tags: [Shipments]
+      responses:
+        '200':
+          description: OK
+  /shipments/create/:
+    post:
+      summary: Tạo shipment mới
+      tags: [Shipments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                customer_id:
+                  type: integer
+                receiver_name:
+                  type: string
+                phone:
+                  type: string
+                address:
+                  type: string
+                carrier:
+                  type: string
+              required: [order_id, customer_id]
+      responses:
+        '201':
+          description: Created
+  /shipments/{shipment_id}/:
+    get:
+      summary: Xem chi tiết 1 shipment
+      tags: [Shipments]
+      parameters:
+        - in: path
+          name: shipment_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /shipments/{shipment_id}/status/:
+    patch:
+      summary: Cập nhật trạng thái shipment
+      tags: [Shipments]
+      parameters:
+        - in: path
+          name: shipment_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, picked, shipping, delivered, failed, cancelled]
+              required: [status]
+      responses:
+        '200':
+          description: Updated
+  /shipments/order/{order_id}/:
+    get:
+      summary: Danh sách shipment theo order
+      tags: [Shipments]
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /shipments/customer/{customer_id}/:
+    get:
+      summary: Danh sách shipment theo customer
+      tags: [Shipments]
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+

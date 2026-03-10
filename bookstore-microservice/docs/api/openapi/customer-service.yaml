@@ -1,0 +1,56 @@
+openapi: 3.0.3
+info:
+  title: Customer Service API
+  version: 1.0.0
+  description: Quản lý khách hàng (business customer).
+servers:
+  - url: http://customer-service:8000
+paths:
+  /customers/:
+    get:
+      summary: Danh sách khách hàng
+      tags: [Customers]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+    post:
+      summary: Tạo khách hàng mới
+      description: |
+        Khi tạo customer mới, service tự động gọi cart-service để tạo giỏ hàng cho khách.
+      tags: [Customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+
+components:
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+      required: [name, email]
+

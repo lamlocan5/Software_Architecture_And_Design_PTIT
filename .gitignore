@@ -111,3 +111,21 @@ yarn.lock
 # Documentation
 docs/_build/
 site/
+
+*.docx
+ass04_04.03_lamdn.pdf
+ass03_04.03_lamdn.pdf
+ass02_04.03_lamdn.pdf
+ass01_04.03_lamdn.pdf
+ass00_04.03_lamdn.pdf
+ass01.1_04.03_lamdn.pdf
+ass01.2_04.03_lamdn.pdf
+ass01.3_04.03_lamdn.pdf
+ass01.4_04.03_lamdn.pdf
+ass01.5_04.03_lamdn.pdf
+ass01.6_04.03_lamdn.pdf
+ass01.7_04.03_lamdn.pdf
+ass01.8_04.03_lamdn.pdf
+ass01.9_04.03_lamdn.pdf
+ass01.10_04.03_lamdn.pdf
+lamdn.pdf

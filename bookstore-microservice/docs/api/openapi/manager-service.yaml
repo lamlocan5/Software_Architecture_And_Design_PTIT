@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Manager Service API
+  version: 1.0.0
+  description: Quản lý hồ sơ quản lý (manager).
+servers:
+  - url: http://manager-service:8000
+paths:
+  /managers/:
+    get:
+      summary: Danh sách managers
+      tags: [Managers]
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Tạo manager mới
+      tags: [Managers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Manager'
+      responses:
+        '201':
+          description: Created
+  /managers/{id}/:
+    patch:
+      summary: Cập nhật một phần hồ sơ manager
+      tags: [Managers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Xoá manager
+      tags: [Managers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+    Manager:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required: [name, email]
+

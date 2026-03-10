@@ -1,0 +1,157 @@
+openapi: 3.0.3
+info:
+  title: Book Service API
+  version: 1.0.0
+  description: |
+    Quản lý sách và nhà xuất bản trong hệ thống bookstore.
+servers:
+  - url: http://book-service:8000
+paths:
+  /books/:
+    get:
+      summary: Danh sách sách
+      tags: [Books]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+    post:
+      summary: Tạo sách mới
+      tags: [Books]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          description: Validation error
+  /publishers/:
+    get:
+      summary: Danh sách nhà xuất bản
+      tags: [Publishers]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Publisher'
+    post:
+      summary: Tạo nhà xuất bản mới
+      tags: [Publishers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Publisher'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publisher'
+        '400':
+          description: Validation error
+  /publishers/{id}/:
+    get:
+      summary: Xem chi tiết nhà xuất bản
+      tags: [Publishers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publisher'
+        '404':
+          description: Not found
+    put:
+      summary: Cập nhật nhà xuất bản
+      tags: [Publishers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Publisher'
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Xoá nhà xuất bản
+      tags: [Publishers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+    Publisher:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        mail:
+          type: string
+          format: email
+      required: [name, mail]
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        author:
+          type: string
+        price:
+          type: number
+          format: float
+        stock:
+          type: integer
+        publisher:
+          type: integer
+          nullable: true
+        publisher_detail:
+          $ref: '#/components/schemas/Publisher'
+      required: [title, author, price, stock]
+

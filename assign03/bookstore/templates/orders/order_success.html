@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="text-align: center; padding: 3rem;">
+    <div style="color: green; font-size: 4rem; margin-bottom: 1rem;">&#10004;</div>
+    <h1 style="margin-bottom: 1rem;">Order Placed Successfully!</h1>
+    <p style="font-size: 1.2rem; color: gray;">Thank you for your purchase. Your order number is #{{ order.id }}.</p>
+    <div style="margin-top: 2rem;">
+        <a href="{% url 'book_list' %}" class="btn-primary" style="text-decoration: none;">Continue Shopping</a>
+        <a href="{% url 'order_list' %}"
+            style="margin-left: 1rem; text-decoration: none; color: var(--primary-color);">View My Orders</a>
+    </div>
+</div>
+{% endblock %}

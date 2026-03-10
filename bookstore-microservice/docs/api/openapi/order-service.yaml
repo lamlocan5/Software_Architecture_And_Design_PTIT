@@ -1,0 +1,99 @@
+openapi: 3.0.3
+info:
+  title: Order Service API
+  version: 1.0.0
+  description: Quản lý đơn hàng và trạng thái đơn.
+servers:
+  - url: http://order-service:8000
+paths:
+  /orders/:
+    get:
+      summary: Danh sách tất cả đơn hàng
+      tags: [Orders]
+      responses:
+        '200':
+          description: OK
+  /orders/create/:
+    post:
+      summary: Tạo đơn hàng mới từ giỏ hàng
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: integer
+                total_amount:
+                  type: number
+                  format: float
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      book_id:
+                        type: integer
+                      quantity:
+                        type: integer
+                      price_at_order:
+                        type: number
+                        format: float
+                    required: [book_id, quantity, price_at_order]
+              required: [customer_id, total_amount, items]
+      responses:
+        '201':
+          description: Created
+  /orders/{order_id}/:
+    get:
+      summary: Lấy chi tiết 1 đơn hàng
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /orders/{order_id}/status/:
+    patch:
+      summary: Cập nhật trạng thái đơn hàng
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, confirmed, shipping, delivered, cancelled]
+              required: [status]
+      responses:
+        '200':
+          description: Updated
+  /orders/customer/{customer_id}/:
+    get:
+      summary: Danh sách đơn hàng theo customer_id
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+

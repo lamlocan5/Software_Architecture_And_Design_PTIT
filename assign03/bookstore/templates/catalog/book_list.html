@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 style="margin-bottom: 2rem;">Browse Books</h1>
+
+    <div class="book-grid">
+        {% for book in books %}
+        <div class="card">
+            <div class="card-body">
+                <h3 class="book-title">
+                    <a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a>
+                </h3>
+                <div class="book-author">by {{ book.authors.all|join:", " }}</div>
+                <div class="book-price">${{ book.price }}</div>
+                <a href="{% url 'book_detail' book.pk %}" class="btn-primary"
+                    style="display:inline-block; margin-top:1rem; text-decoration:none;">View Details</a>
+            </div>
+        </div>
+        {% empty %}
+        <p>No books available in the catalog.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

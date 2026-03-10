@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">
+            {% if is_admin %}Admin Dashboard{% elif is_manager_role %}Manager Dashboard{% else %}Staff Dashboard{% endif %}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if is_admin %}
+                Tổng quan toàn bộ hệ thống Bookstore Microservice
+            {% elif is_manager_role %}
+                Tổng quan số sách, khách hàng và đơn hàng bạn quản lý
+            {% else %}
+                Tổng quan công việc vận hành: sách, khách hàng, đơn hàng
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Thống kê -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card text-white" style="background: linear-gradient(135deg, #0d6efd, #0a58ca);">
+            <div class="card-body">
+                <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Tổng số sách</p>
+                <h2 class="mb-0 fw-bold display-6">{{ book_count }}</h2>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <a href="/books/" class="text-white text-decoration-none small">Quản lý sách →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card text-white" style="background: linear-gradient(135deg, #198754, #146c43);">
+            <div class="card-body">
+                <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Khách hàng</p>
+                <h2 class="mb-0 fw-bold display-6">{{ customer_count }}</h2>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <a href="/customers/" class="text-white text-decoration-none small">Quản lý khách hàng →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card text-white" style="background: linear-gradient(135deg, #fd7e14, #d63384);">
+            <div class="card-body">
+                <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Đơn hàng</p>
+                <h2 class="mb-0 fw-bold display-6">{{ order_count }}</h2>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <a href="/orders/" class="text-white text-decoration-none small">Quản lý đơn hàng →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="card stat-card text-white" style="background: linear-gradient(135deg, #ffc107, #e67e00);">
+            <div class="card-body">
+                <p class="mb-1 small fw-semibold text-uppercase" style="color:rgba(0,0,0,0.6)">Đánh giá</p>
+                <h2 class="mb-0 fw-bold display-6 text-dark">{{ review_count }}</h2>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <a href="/reviews/" class="text-dark text-decoration-none small">Xem đánh giá →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="card stat-card text-white" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+            <div class="card-body">
+                <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Nhà xuất bản</p>
+                <h2 class="mb-0 fw-bold display-6">{{ publisher_count }}</h2>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <a href="/publishers/" class="text-white text-decoration-none small">Quản lý NXB →</a>
+            </div>
+        </div>
+    </div>
+    {% if is_admin %}
+        <div class="col-md-4 col-lg-3">
+            <div class="card stat-card text-white" style="background: linear-gradient(135deg, #6f42c1, #59359a);">
+                <div class="card-body">
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Microservices</p>
+                    <h2 class="mb-0 fw-bold display-6">{{ service_count }}</h2>
+                </div>
+                <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                    <span class="text-white small opacity-75">
+                        api-gateway + {{ service_count }} backend services
+                    </span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    {% if is_admin %}
+    <!-- Kiến trúc hệ thống: chỉ admin xem -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">Kiến trúc Microservice</div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">Sơ đồ logic các microservice và cổng vào hệ thống.</p>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-1">
+                        <code>api-gateway</code> — cổng web & auth người dùng & UI &nbsp;(<strong>:8000</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>customer-service</code> — khách hàng/business customer &nbsp;(<strong>:8001</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>book-service</code> — dữ liệu sách & nhà xuất bản &nbsp;(<strong>:8002</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>cart-service</code> — giỏ hàng &nbsp;(<strong>:8003</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>order-service</code> — đơn hàng & luồng trạng thái &nbsp;(<strong>:8004</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>review-service</code> — đánh giá & rating sách &nbsp;(<strong>:8005</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>ship-service</code> — shipment / giao hàng &nbsp;(<strong>:8006</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>pay-service</code> — thanh toán & trạng thái payment &nbsp;(<strong>:8007</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>catalogue-service</code> — catalogue/aggregation sách &nbsp;(<strong>:8008</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>staff-service</code> — hồ sơ nhân viên vận hành &nbsp;(<strong>:8009</strong>)
+                    </li>
+                    <li class="mb-1">
+                        <code>manager-service</code> — hồ sơ quản lý &nbsp;(<strong>:8010</strong>)
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Thao tác nhanh -->
+    <div class="{% if is_admin %}col-lg-5{% else %}col-lg-6{% endif %}">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">Thao tác nhanh</div>
+            <div class="card-body d-flex flex-column gap-3">
+                <a href="/books/" class="btn btn-primary btn-lg text-start">
+                    <div class="fw-semibold">Thêm sách mới</div>
+                    <small class="opacity-75 fw-normal">Quản lý danh mục sách</small>
+                </a>
+                <a href="/customers/" class="btn btn-success btn-lg text-start">
+                    <div class="fw-semibold">Thêm khách hàng</div>
+                    <small class="opacity-75 fw-normal">Giỏ hàng tự động được tạo</small>
+                </a>
+                <a href="/publishers/" class="btn btn-lg text-white text-start" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+                    <div class="fw-semibold">Quản lý nhà xuất bản</div>
+                    <small class="opacity-75 fw-normal">Thêm / chỉnh sửa NXB</small>
+                </a>
+                <div class="card bg-light border-0 mt-auto">
+                    <div class="card-body py-2 px-3">
+                        <p class="mb-1 fw-semibold small text-muted text-uppercase">Luồng Demo</p>
+                        <ol class="mb-0 ps-3 small text-secondary">
+                            <li>Thêm sách → <code>/books/</code></li>
+                            <li>Tạo khách hàng → <code>/customers/</code></li>
+                            <li>Thêm vào giỏ → <code>/cart/&lt;id&gt;/</code></li>
+                            <li>Đặt hàng → nút <strong>Đặt hàng</strong> trong giỏ</li>
+                            <li>Đánh giá sách → <code>/reviews/</code></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recommended_books %}
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Gợi ý cho bạn</span>
+                <span class="badge bg-secondary">{{ recommended_books|length }} cuốn</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for b in recommended_books %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="fw-semibold">{{ b.title }}</div>
+                                <div class="text-muted small">{{ b.author }}</div>
+                                <div class="mt-2">
+                                    <span class="badge py-2 px-3" style="background:#d1e7dd; color:#0a3622;">
+                                        {{ b.price|floatformat:0 }} ₫
+                                    </span>
+                                </div>
+                                <a href="/books/{{ b.id }}/" class="btn btn-sm btn-outline-primary mt-3 w-100">Xem</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

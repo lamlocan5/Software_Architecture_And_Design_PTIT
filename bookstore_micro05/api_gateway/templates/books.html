@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book List | BookStore</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .nav a {
+            padding: 8px 20px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav a.active {
+            background: linear-gradient(90deg, #a78bfa, #60a5fa);
+            color: #fff;
+        }
+
+        .nav a:not(.active) {
+            border: 1px solid #475569;
+            color: #94a3b8;
+        }
+
+        .nav a:not(.active):hover {
+            border-color: #a78bfa;
+            color: #a78bfa;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .book-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(167,139,250,0.2);
+            border-color: rgba(167,139,250,0.4);
+        }
+
+        .book-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .book-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 6px;
+        }
+
+        .book-author {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+
+        .book-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .book-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #a78bfa;
+        }
+
+        .book-stock {
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(96,165,250,0.15);
+            color: #60a5fa;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #475569;
+        }
+
+        .empty-state .icon { font-size: 4rem; margin-bottom: 16px; }
+        .empty-state p { font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 BookStore</h1>
+            <p>Microservices Architecture</p>
+        </header>
+
+        <nav class="nav">
+            <a href="/books/" class="active">📖 Books</a>
+            <a href="/cart/1/">🛒 My Cart</a>
+        </nav>
+
+        {% if books %}
+        <div class="book-grid">
+            {% for book in books %}
+            <div class="book-card">
+                <div class="book-icon">📗</div>
+                <div class="book-title">{{ book.title }}</div>
+                <div class="book-author">✍️ {{ book.author }}</div>
+                <div class="book-footer">
+                    <span class="book-price">${{ book.price }}</span>
+                    <span class="book-stock">{{ book.stock }} in stock</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No books available yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

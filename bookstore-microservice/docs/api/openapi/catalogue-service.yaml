@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: Catalogue Service API
+  version: 1.0.0
+  description: Aggregation sách (book + rating) phục vụ duyệt/catalogue.
+servers:
+  - url: http://catalogue-service:8000
+paths:
+  /catalog/books/:
+    get:
+      summary: Danh sách sách (đã ghép rating)
+      tags: [Catalogue]
+      responses:
+        '200':
+          description: OK
+  /catalog/books/{id}/:
+    get:
+      summary: Chi tiết 1 sách (đã ghép rating)
+      tags: [Catalogue]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+

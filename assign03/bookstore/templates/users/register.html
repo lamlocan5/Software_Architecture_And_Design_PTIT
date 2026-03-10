@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="form-container">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Register</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+            <small style="color: gray; display: block; margin-top: 0.25rem;">{{ field.help_text|safe }}</small>
+            {% endif %}
+            {% if field.errors %}
+            <div style="color: red; font-size: 0.875rem; margin-top: 0.25rem;">
+                {{ field.errors|striptags }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn-primary btn-block">Register</button>
+    </form>
+    <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+        Already have an account? <a href="{% url 'login' %}">Login here</a>.
+    </div>
+</div>
+
+<style>
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+
+    ul.helptext {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 0.8rem;
+        color: gray;
+    }
+</style>
+{% endblock %}

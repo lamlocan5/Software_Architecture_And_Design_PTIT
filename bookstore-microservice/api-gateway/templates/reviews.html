@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Đánh giá Sách{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Đánh giá Sách</h2>
+        <p class="text-muted mb-0">Khách hàng để lại đánh giá cho sách đã đọc</p>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Form thêm đánh giá -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#fff8e7; color:#664d03;">
+                Viết đánh giá
+            </div>
+            <div class="card-body">
+                {% if books and customers %}
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    {% if request.user.is_staff %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Khách hàng</label>
+                        <select name="customer_id" class="form-select" required>
+                            <option value="">-- Chọn khách hàng --</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="customer_id" value="{{ user_customer_id }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Đánh giá với tư cách</label>
+                        <div class="form-control bg-light">{{ request.user.first_name }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Sách</label>
+                        <select name="book_id" class="form-select" required>
+                            <option value="">-- Chọn sách --</option>
+                            {% for b in books %}
+                            <option value="{{ b.id }}">[#{{ b.id }}] {{ b.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Số sao</label>
+                        <div class="d-flex gap-2">
+                            {% for i in "12345" %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rating" value="{{ i }}" id="star{{ i }}" {% if i == "5" %}checked{% endif %} required>
+                                <label class="form-check-label text-warning" for="star{{ i }}">{{ i }}★</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Nhận xét</label>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Cảm nhận của bạn về cuốn sách..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-semibold text-dark py-2">Gửi đánh giá</button>
+                </form>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <p class="small">Cần có sách và khách hàng trước khi đánh giá.</p>
+                    <a href="/books/" class="btn btn-sm btn-primary me-1">Thêm sách</a>
+                    <a href="/customers/" class="btn btn-sm btn-success">Thêm KH</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh sách đánh giá -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Tất cả đánh giá</span>
+                <span class="badge bg-secondary fs-6">{{ reviews|length }} đánh giá</span>
+            </div>
+            <div class="card-body p-0">
+                {% if reviews %}
+                <div class="list-group list-group-flush">
+                {% for review in reviews %}
+                    <div class="list-group-item px-4 py-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="mb-1 fw-semibold">
+                                    {% if review.book_title %}{{ review.book_title }}{% else %}Book #{{ review.book_id }}{% endif %}
+                                </p>
+                                <p class="mb-1 small text-muted">
+                                    {% if review.customer_name %}{{ review.customer_name }}{% else %}Khách #{{ review.customer_id }}{% endif %}
+                                    &nbsp;·&nbsp; {{ review.created_at|slice:":10" }}
+                                </p>
+                                {% if review.comment %}
+                                <p class="mb-0 text-secondary fst-italic">"{{ review.comment }}"</p>
+                                {% endif %}
+                            </div>
+                            <div class="text-end ms-3 flex-shrink-0">
+                                <div class="text-warning fs-5">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">{{ review.rating }}/5</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state text-center">
+                    <p class="fw-semibold">Chưa có đánh giá nào</p>
+                    <p class="small">Hãy là người đầu tiên đánh giá!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

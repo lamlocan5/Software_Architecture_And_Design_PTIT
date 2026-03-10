@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Quản lý Sách{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">Quản lý Sách</h2>
+        <p class="text-muted mb-0">Thêm và xem danh sách sách trong hệ thống</p>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4" role="alert">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Form thêm sách: admin / staff / manager -->
+    {% if is_admin or is_staff_role or is_manager_role %}
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#e7f1ff; color:#0a58ca;">
+                Thêm sách mới
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Tên sách</label>
+                        <input type="text" name="title" class="form-control" placeholder="Ví dụ: Lập trình Python"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Tác giả</label>
+                        <input type="text" name="author" class="form-control" placeholder="Ví dụ: Nguyễn Văn A"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Giá (₫)</label>
+                        <div class="input-group">
+                            <input type="number" name="price" class="form-control" placeholder="150000" step="1000"
+                                min="0" required>
+                            <span class="input-group-text">₫</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Số lượng kho</label>
+                        <input type="number" name="stock" class="form-control" placeholder="10" min="0" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">Nhà xuất bản</label>
+                        <select name="publisher" class="form-select">
+                            <option value="">— Không chọn —</option>
+                            {% for pub in publishers %}
+                            <option value="{{ pub.id }}">{{ pub.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">Thêm sách</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3"
+            style="background:#fffbf0; border-left: 4px solid #ffc107 !important; border-radius: 8px;">
+            <div class="card-body py-2 px-3">
+                <p class="mb-1 fw-semibold small">Lưu ý</p>
+                <ul class="mb-0 ps-3 small text-secondary">
+                    <li>Giá nhập theo đơn vị <strong>VNĐ</strong></li>
+                    <li>ID sách dùng để thêm vào giỏ hàng</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Danh sách sách -->
+    <div class="{% if is_admin or is_staff_role or is_manager_role %}col-lg-8{% else %}col-12{% endif %}">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Danh sách sách</span>
+                <span class="badge bg-secondary fs-6">{{ books|length }} cuốn</span>
+            </div>
+            <div class="card-body p-0">
+                {% if books %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        {% comment %}Build a map of publisher id -> name{% endcomment %}
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50px;">ID</th>
+                                <th>Tên sách</th>
+                                <th>Tác giả</th>
+                                <th>Nhà xuất bản</th>
+                                <th>Giá</th>
+                                <th style="width:70px;">Kho</th>
+                                <th>Đánh giá</th>
+                                {% if request.user.is_staff %}<th style="width:70px;">Thao tác</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for book in books %}
+                            <tr {% if not request.user.is_staff %}style="cursor:pointer;" onclick="location.href='/books/{{ book.id }}/'"{% endif %}>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ book.id }}</span>
+                                </td>
+                                <td class="fw-semibold">
+                                    {% if request.user.is_staff %}
+                                        {{ book.title }}
+                                    {% else %}
+                                        <a class="text-decoration-none" href="/books/{{ book.id }}/">{{ book.title }}</a>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ book.author }}</td>
+                                <td>
+                                    {% if book.publisher %}
+                                        {% for pub in publishers %}{% if pub.id == book.publisher %}<span class="badge" style="background:#e7f1ff; color:#0a58ca;">{{ pub.name }}</span>{% endif %}{% endfor %}
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge py-2 px-3" style="background:#d1e7dd; color:#0a3622;">
+                                        {{ book.price|floatformat:0 }} ₫
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if book.stock > 5 %}
+                                    <span class="badge bg-success">{{ book.stock }}</span>
+                                    {% elif book.stock > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ book.stock }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Hết</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if book.total_reviews > 0 %}
+                                    <span class="text-warning">
+                                        {% for i in "12345" %}{% if forloop.counter <= book.avg_rating %}★{% else %}☆{% endif %}{% endfor %}</span>
+                                        <small class="text-muted">({{ book.total_reviews }})</small>
+                                    {% else %}
+                                        <small class="text-muted">Chưa có</small>
+                                    {% endif %}
+                                </td>
+                                {% if request.user.is_staff %}
+                                <td>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        onclick="openEditModal({{ book.id }}, '{{ book.title|escapejs }}', '{{ book.author|escapejs }}', {{ book.price }}, {{ book.stock }}, '{{ book.publisher }}')">
+                                        ✏️ Sửa
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state text-center">
+                    <p class="fw-semibold">Chưa có sách nào</p>
+                    <p class="small">Hãy thêm sách đầu tiên bằng form bên trái!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if request.user.is_staff %}
+<!-- Modal Sửa sách -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#e7f1ff; color:#0a58ca;">
+        <h5 class="modal-title fw-bold" id="editBookModalLabel">✏️ Sửa thông tin sách</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editBookForm" method="POST" action="">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Tên sách</label>
+            <input type="text" name="title" id="edit_title" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Tác giả</label>
+            <input type="text" name="author" id="edit_author" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Giá (₫)</label>
+            <div class="input-group">
+              <input type="number" name="price" id="edit_price" class="form-control" step="1000" min="0" required>
+              <span class="input-group-text">₫</span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Số lượng kho</label>
+            <input type="number" name="stock" id="edit_stock" class="form-control" min="0" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">Nhà xuất bản</label>
+            <select name="publisher" id="edit_publisher" class="form-select">
+              <option value="">— Không chọn —</option>
+              {% for pub in publishers %}
+              <option value="{{ pub.id }}">{{ pub.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+          <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEditModal(id, title, author, price, stock, publisher) {
+    document.getElementById('edit_title').value   = title;
+    document.getElementById('edit_author').value  = author;
+    document.getElementById('edit_price').value   = price;
+    document.getElementById('edit_stock').value   = stock;
+    var sel = document.getElementById('edit_publisher');
+    for (var i = 0; i < sel.options.length; i++) {
+        sel.options[i].selected = (sel.options[i].value == String(publisher));
+    }
+    document.getElementById('editBookForm').action = '/books/' + id + '/edit/';
+    var modal = new bootstrap.Modal(document.getElementById('editBookModal'));
+    modal.show();
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,101 @@
+version: "3"
+
+services:
+
+  customer-service:
+    build: ./customer-service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data/customer:/app/data
+
+  book-service:
+    build: ./book-service
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./data/book:/app/data
+
+  cart-service:
+    build: ./cart-service
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./data/cart:/app/data
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./data/order:/app/data
+
+  review-service:
+    build: ./review-service
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./data/review:/app/data
+
+  catalogue-service:
+    build: ./catalogue-service
+    ports:
+      - "8008:8000"
+    volumes:
+      - ./data/catalogue:/app/data
+
+  ship-service:
+    build: ./ship-service
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./data/ship:/app/data
+
+  pay-service:
+    build: ./pay-service
+    ports:
+      - "8007:8000"
+    volumes:
+      - ./data/pay:/app/data
+
+  staff-service:
+    build: ./staff-service
+    ports:
+      - "8009:8000"
+    volumes:
+      - ./data/staff:/app/data
+
+  manager-service:
+    build: ./manager-service
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./data/manager:/app/data
+
+  recommender-ai-service:
+    build: ./recommender-ai-service
+    ports:
+      - "8011:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./data/recommender-ai:/app/data
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/gateway:/app/data
+    depends_on:
+      - customer-service
+      - book-service
+      - cart-service
+      - order-service
+      - review-service
+      - catalogue-service
+      - ship-service
+      - pay-service
+      - staff-service
+      - manager-service
+      - recommender-ai-service

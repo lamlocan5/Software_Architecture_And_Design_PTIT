@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block content %}
+<h1>Staff Dashboard</h1>
+
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0;">
+    <div style="background: #007bff; color: white; padding: 1.5rem; border-radius: 8px;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ total_orders }}</h3>
+        <p>Tổng đơn hàng</p>
+    </div>
+    <div style="background: #28a745; color: white; padding: 1.5rem; border-radius: 8px;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ pending_orders }}</h3>
+        <p>Đơn chờ xử lý</p>
+    </div>
+    <div style="background: #ffc107; color: white; padding: 1.5rem; border-radius: 8px;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ total_customers }}</h3>
+        <p>Khách hàng</p>
+    </div>
+    <div style="background: #dc3545; color: white; padding: 1.5rem; border-radius: 8px;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ total_books }}</h3>
+        <p>Tổng sách</p>
+    </div>
+</div>
+
+<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin: 1rem 0;">
+    <h3>Doanh thu 30 ngày qua</h3>
+    <p style="font-size: 2rem; color: #28a745; font-weight: bold;">{{ monthly_revenue|floatformat:0 }} VNĐ</p>
+</div>
+
+<h2 style="margin-top: 2rem;">Đơn hàng gần đây</h2>
+<table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+    <thead>
+        <tr style="background: #f8f9fa;">
+            <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Mã đơn</th>
+            <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Khách hàng</th>
+            <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Ngày đặt</th>
+            <th style="padding: 1rem; text-align: right; border-bottom: 2px solid #ddd;">Tổng tiền</th>
+            <th style="padding: 1rem; text-align: center; border-bottom: 2px solid #ddd;">Trạng thái</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in recent_orders %}
+        <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 1rem;">#{{ order.order_id }}</td>
+            <td style="padding: 1rem;">{{ order.customer.username }}</td>
+            <td style="padding: 1rem;">{{ order.order_date|date:"d/m/Y H:i" }}</td>
+            <td style="padding: 1rem; text-align: right;">{{ order.total_amount|floatformat:0 }} VNĐ</td>
+            <td style="padding: 1rem; text-align: center;">
+                <span style="padding: 0.25rem 0.75rem; background: #28a745; color: white; border-radius: 4px;">{{
+                    order.status }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'manage_orders' %}"
+        style="padding: 0.75rem 1.5rem; background: #007bff; color: white; text-decoration: none; border-radius: 4px; margin-right: 1rem;">Quản
+        lý đơn hàng</a>
+    <a href="{% url 'manage_inventory' %}"
+        style="padding: 0.75rem 1.5rem; background: #28a745; color: white; text-decoration: none; border-radius: 4px; margin-right: 1rem;">Quản
+        lý kho</a>
+    <a href="{% url 'manage_customers' %}"
+        style="padding: 0.75rem 1.5rem; background: #ffc107; color: white; text-decoration: none; border-radius: 4px;">Quản
+        lý khách hàng</a>
+</div>
+{% endblock %}

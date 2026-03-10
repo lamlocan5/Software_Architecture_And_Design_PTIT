@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenvs
+venv/
+*/venv/
+.venv/
+
+# Django SQLite databases (per service)
+data/
+
+# Byte-compiled / cache
+.mypy_cache/
+.pytest_cache/
+
+# Environment / secrets
+.env
+*.env
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# Node / mermaid-cli cache
+node_modules/
+npm-debug.log*
+
+# Docker
+*.log
+

@@ -1,0 +1,49 @@
+{% extends "store/base.html" %}
+{% block title %}Add book – Bookstore{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow border border-gray-100 p-6">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6">Add new book</h1>
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label for="id_title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}<p class="text-red-600 text-sm mt-1">{{ form.title.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="id_category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    {{ form.category }}
+                </div>
+                <div>
+                    <label for="id_author" class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                    {{ form.author }}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="id_price" class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    {{ form.price }}
+                </div>
+                <div>
+                    <label for="id_stock" class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                    {{ form.stock }}
+                </div>
+            </div>
+            <div>
+                <label for="id_description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                {{ form.description }}
+            </div>
+            <div>
+                <label for="id_cover_image" class="block text-sm font-medium text-gray-700 mb-1">Cover image</label>
+                {{ form.cover_image }}
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-700 transition">Save book</button>
+                <a href="{% url 'staff:dashboard' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
