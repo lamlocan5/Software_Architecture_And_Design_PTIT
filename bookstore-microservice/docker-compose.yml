@@ -16,6 +16,20 @@ services:
     volumes:
       - ./data/book:/app/data
 
+  clothe-service:
+    build: ./clothe-service
+    ports:
+      - "8012:8000"
+    volumes:
+      - ./data/clothe:/app/data
+
+  electronic-service:
+    build: ./electronic-service
+    ports:
+      - "8013:8000"
+    volumes:
+      - ./data/electronic:/app/data
+
   cart-service:
     build: ./cart-service
     ports:
@@ -90,6 +104,8 @@ services:
     depends_on:
       - customer-service
       - book-service
+      - clothe-service
+      - electronic-service
       - cart-service
       - order-service
       - review-service

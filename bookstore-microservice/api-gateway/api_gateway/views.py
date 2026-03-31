@@ -3,17 +3,19 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 import requests
 
-BOOK_SERVICE_URL      = "http://book-service:8000"
-CATALOGUE_SERVICE_URL = "http://catalogue-service:8000"
-CART_SERVICE_URL      = "http://cart-service:8000"
-CUSTOMER_SERVICE_URL  = "http://customer-service:8000"
-STAFF_SERVICE_URL     = "http://staff-service:8000"
-MANAGER_SERVICE_URL   = "http://manager-service:8000"
-ORDER_SERVICE_URL     = "http://order-service:8000"
-REVIEW_SERVICE_URL    = "http://review-service:8000"
-SHIP_SERVICE_URL      = "http://ship-service:8000"
-PAY_SERVICE_URL       = "http://pay-service:8000"
-RECOMMENDER_SERVICE_URL = "http://recommender-ai-service:8000"
+BOOK_SERVICE_URL          = "http://book-service:8000"
+CLOTHE_SERVICE_URL        = "http://clothe-service:8000"
+ELECTRONIC_SERVICE_URL    = "http://electronic-service:8000"
+CATALOGUE_SERVICE_URL     = "http://catalogue-service:8000"
+CART_SERVICE_URL          = "http://cart-service:8000"
+CUSTOMER_SERVICE_URL      = "http://customer-service:8000"
+STAFF_SERVICE_URL         = "http://staff-service:8000"
+MANAGER_SERVICE_URL       = "http://manager-service:8000"
+ORDER_SERVICE_URL         = "http://order-service:8000"
+REVIEW_SERVICE_URL        = "http://review-service:8000"
+SHIP_SERVICE_URL          = "http://ship-service:8000"
+PAY_SERVICE_URL           = "http://pay-service:8000"
+RECOMMENDER_SERVICE_URL   = "http://recommender-ai-service:8000"
 
 
 # ──────────────────────────────── helpers ────────────────────────────────
@@ -173,6 +175,193 @@ def book_list(request):
 
     return render(request, "books.html", {"books": books, "publishers": publishers if isinstance(publishers, list) else [], "message": message})
 
+
+# ──────────────────────────────── CLOTHES ────────────────────────────────
+
+@login_required
+def clothes_list(request):
+    message = None
+
+    # Chỉ admin/manager/staff mới được sửa dữ liệu
+    can_manage = _can_manage_books(request.user)
+
+    if request.method == "POST" and can_manage:
+        action = request.POST.get("action") or "create"
+        try:
+            stock_val = int(request.POST.get("stock") or 0)
+            price_val = float(request.POST.get("price") or 0)
+        except (ValueError, TypeError):
+            message = {"type": "danger", "text": "Số lượng (stock) và giá (price) phải là số hợp lệ!"}
+        else:
+            payload = {
+                "name":   request.POST.get("name"),
+                "size":   request.POST.get("size") or "",
+                "color":  request.POST.get("color") or "",
+                "price":  price_val,
+                "stock":  stock_val,
+                "category": int(request.POST.get("category")) if request.POST.get("category") else None,
+            }
+            try:
+                if action == "update":
+                    cid = request.POST.get("id")
+                    r = _patch(f"{CLOTHE_SERVICE_URL}/clothes/{cid}/", payload)
+                elif action == "delete":
+                    cid = request.POST.get("id")
+                    r = requests.delete(f"{CLOTHE_SERVICE_URL}/clothes/{cid}/", timeout=3)
+                else:
+                    r = _post(f"{CLOTHE_SERVICE_URL}/clothes/", payload)
+
+                if r.status_code in (200, 201, 204):
+                    return redirect("clothes_list")
+                message = {"type": "danger", "text": f"Thao tác với quần áo thất bại: {getattr(r, 'text', '')}"}
+            except Exception as e:
+                message = {"type": "danger", "text": f"Lỗi kết nối clothe-service: {e}"}
+
+    clothes = _get(f"{CLOTHE_SERVICE_URL}/clothes/", [])
+    if not isinstance(clothes, list):
+        clothes = []
+        if message is None:
+            message = {"type": "warning", "text": "Không thể kết nối clothe-service!"}
+
+    categories = _get(f"{CLOTHE_SERVICE_URL}/clothes/categories/", [])
+    if not isinstance(categories, list):
+        categories = []
+
+    return render(request, "clothes.html", {
+        "clothes": clothes,
+        "categories": categories,
+        "message": message,
+        "is_admin": _is_admin(request.user),
+        "is_staff_role": _is_staff_user(request.user),
+        "is_manager_role": _is_manager(request.user),
+        "can_manage_clothes": can_manage,
+    })
+
+
+@login_required
+def clothe_detail(request, clothe_id):
+    customer_id = _get_customer_id(request.user)
+    message = None
+
+    clothing = _get(f"{CLOTHE_SERVICE_URL}/clothes/", [])
+    if isinstance(clothing, list):
+        clothing = next((c for c in clothing if isinstance(c, dict) and c.get("id") == clothe_id), None)
+    if not isinstance(clothing, dict) or not clothing:
+        return redirect("clothes_list")
+
+    # Lấy cart_id hiện tại của customer
+    cart_id = None
+    if customer_id:
+        try:
+            cart_info = requests.get(f"{CART_SERVICE_URL}/carts/customer/{customer_id}/", timeout=3).json()
+            cart_id   = cart_info.get("id")
+        except Exception:
+            cart_id = None
+
+    if request.method == "POST":
+        if not customer_id:
+            return redirect("login")
+        if not cart_id:
+            message = {"type": "danger", "text": "Không tìm thấy giỏ hàng của bạn!"}
+        else:
+            try:
+                quantity = int(request.POST.get("quantity", 1))
+                if quantity < 1:
+                    quantity = 1
+            except Exception:
+                quantity = 1
+
+            try:
+                r = _post(f"{CART_SERVICE_URL}/carts/add-item/", {
+                    "cart": cart_id,
+                    "clothing_id": clothe_id,
+                    "quantity": quantity,
+                })
+                if r.status_code == 200:
+                    return redirect("cart_view", customer_id=customer_id)
+                message = {"type": "danger", "text": f"Thêm vào giỏ thất bại: {getattr(r, 'text', '')}"}
+            except Exception as e:
+                message = {"type": "danger", "text": f"Lỗi kết nối cart-service: {e}"}
+
+    return render(request, "clothe_detail.html", {
+        "clothe": clothing,
+        "message": message,
+        "customer_id": customer_id,
+    })
+
+
+# ──────────────────────────────── ELECTRONICS ──────────────────────────────
+
+@login_required
+def electronics_list(request):
+    message = None
+    can_manage = _can_manage_books(request.user)
+
+    # Hiện tại chỉ đọc, nếu muốn CRUD có thể reuse logic như clothes_list
+    electronics = _get(f"{ELECTRONIC_SERVICE_URL}/electronics/", [])
+    if not isinstance(electronics, list):
+        electronics = []
+        message = {"type": "warning", "text": "Không thể kết nối electronic-service!"}
+
+    return render(request, "electronics.html", {
+        "electronics": electronics,
+        "message": message,
+        "can_manage_electronics": can_manage,
+    })
+
+
+@login_required
+def electronic_detail(request, electronic_id):
+    customer_id = _get_customer_id(request.user)
+    message = None
+
+    electronics = _get(f"{ELECTRONIC_SERVICE_URL}/electronics/", [])
+    if isinstance(electronics, list):
+        electronic = next((e for e in electronics if isinstance(e, dict) and e.get("id") == electronic_id), None)
+    else:
+        electronic = None
+
+    if not isinstance(electronic, dict) or not electronic:
+        return redirect("electronics_list")
+
+    cart_id = None
+    if customer_id:
+        try:
+            cart_info = requests.get(f"{CART_SERVICE_URL}/carts/customer/{customer_id}/", timeout=3).json()
+            cart_id   = cart_info.get("id")
+        except Exception:
+            cart_id = None
+
+    if request.method == "POST":
+        if not customer_id:
+            return redirect("login")
+        if not cart_id:
+            message = {"type": "danger", "text": "Không tìm thấy giỏ hàng của bạn!"}
+        else:
+            try:
+                quantity = int(request.POST.get("quantity", 1))
+                if quantity < 1:
+                    quantity = 1
+            except Exception:
+                quantity = 1
+
+            try:
+                r = _post(f"{CART_SERVICE_URL}/carts/add-item/", {
+                    "cart": cart_id,
+                    "electronic_id": electronic_id,
+                    "quantity": quantity,
+                })
+                if r.status_code == 200:
+                    return redirect("cart_view", customer_id=customer_id)
+                message = {"type": "danger", "text": f"Thêm vào giỏ thất bại: {getattr(r, 'text', '')}"}
+            except Exception as e:
+                message = {"type": "danger", "text": f"Lỗi kết nối cart-service: {e}"}
+
+    return render(request, "electronic_detail.html", {
+        "electronic": electronic,
+        "message": message,
+        "customer_id": customer_id,
+    })
 
 @login_required
 def book_detail(request, book_id):
@@ -628,14 +817,37 @@ def cart_view(request, customer_id):
         else:
             message = {"type": "danger", "text": "Không tìm thấy giỏ hàng!"}
 
-    items    = _get(f"{CART_SERVICE_URL}/carts/{customer_id}/", [])
-    books    = _get(f"{BOOK_SERVICE_URL}/books/", [])
-    book_map = {b["id"]: b for b in (books if isinstance(books, list) else [])}
+    items      = _get(f"{CART_SERVICE_URL}/carts/{customer_id}/", [])
+    books      = _get(f"{BOOK_SERVICE_URL}/books/", [])
+    clothes    = _get(f"{CLOTHE_SERVICE_URL}/clothes/", [])
+    electronics = _get(f"{ELECTRONIC_SERVICE_URL}/electronics/", [])
+    book_map      = {b["id"]: b for b in (books if isinstance(books, list) else [])}
+    clothe_map    = {c["id"]: c for c in (clothes if isinstance(clothes, list) else [])}
+    electronic_map = {e["id"]: e for e in (electronics if isinstance(electronics, list) else [])}
     total    = 0
     for item in (items if isinstance(items, list) else []):
-        book             = book_map.get(item["book_id"], {})
-        item["book"]     = book
-        item["subtotal"] = float(book.get("price", 0)) * item["quantity"] if book else 0
+        product = None
+        if item.get("book_id"):
+            product = book_map.get(item["book_id"])
+            item["product_type"] = "book"
+        elif item.get("clothing_id"):
+            product = clothe_map.get(item["clothing_id"])
+            item["product_type"] = "clothing"
+        elif item.get("electronic_id"):
+            product = electronic_map.get(item["electronic_id"])
+            item["product_type"] = "electronic"
+        else:
+            item["product_type"] = "unknown"
+
+        item["product"] = product or {}
+        price = 0.0
+        if isinstance(product, dict):
+            # cả book và clothing đều dùng field price
+            try:
+                price = float(product.get("price", 0))
+            except Exception:
+                price = 0.0
+        item["subtotal"] = price * item.get("quantity", 0)
         total           += item["subtotal"]
 
     return render(request, "cart.html", {

@@ -1,0 +1,148 @@
+{% extends 'frontend/base.html' %}
+{% block content %}
+<div class="profile-grid animate-fade-up">
+
+    <!-- Profile Card -->
+    <div class="glass profile-card">
+        <div class="page-header" style="border:none;padding-bottom:0;margin-bottom:1.5rem;">
+            <h1>Account Profile</h1>
+            <p>Manage your personal information</p>
+        </div>
+
+        <div id="profileLoading" style="color:var(--text-muted);text-align:center;padding:3rem;">
+            <span style="font-size:2rem;display:block;margin-bottom:1rem;animation:float 2s ease-in-out infinite;">⏳</span>
+            Loading your information…
+        </div>
+
+        <form id="profileForm" style="display:none;">
+            <!-- Avatar / Identity Block -->
+            <div class="avatar-block">
+                <div class="avatar" id="avatarChar">U</div>
+                <div>
+                    <h2 id="dispUsername" style="font-size:1.35rem;margin-bottom:0.25rem;">username</h2>
+                    <div id="dispRole" class="role-badge">Role</div>
+                </div>
+            </div>
+
+            <!-- Editable Fields -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+                <div class="form-group" style="grid-column:span 2;">
+                    <label for="prof-fullname">Full Name</label>
+                    <input type="text" id="prof-fullname" class="form-input" required placeholder="Your full name">
+                </div>
+                <div class="form-group">
+                    <label for="prof-email">Email Address</label>
+                    <input type="email" id="prof-email" class="form-input" required placeholder="you@email.com">
+                </div>
+                <div class="form-group">
+                    <label id="dynamicFieldLabel" for="prof-dynamic">Phone</label>
+                    <input type="text" id="prof-dynamic" class="form-input" required placeholder="—">
+                </div>
+            </div>
+
+            <div class="text-right mt-3">
+                <button type="submit" class="btn btn-primary" style="padding:.75rem 2.5rem;" id="saveBtn">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders / Staff Notice Block -->
+    <div id="orderListWrapper"></div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('token');
+    const isStaff = localStorage.getItem('isStaff') === 'true';
+    if (!token) { window.location.href = '/login/'; return; }
+
+    document.getElementById('dynamicFieldLabel').innerText = isStaff ? 'Job Position' : 'Phone Number';
+
+    const orderListWrapper = document.getElementById('orderListWrapper');
+    if (isStaff) {
+        orderListWrapper.innerHTML = `
+            <div class="glass empty-state profile-card">
+                <span class="empty-state-icon">🖥️</span>
+                <h3>Staff Account</h3>
+                <p>Staff accounts do not have order histories. Manage products and inventory from your dashboard.</p>
+                <a href="/staff/dashboard/" class="btn btn-primary">Go to Dashboard</a>
+            </div>`;
+    } else {
+        orderListWrapper.innerHTML = `
+            <div class="glass empty-state profile-card">
+                <span class="empty-state-icon">🛍️</span>
+                <h3>No orders yet</h3>
+                <p>Once you checkout, your orders will appear here.</p>
+                <a href="/products/" class="btn btn-primary">Start Shopping</a>
+            </div>`;
+    }
+
+    try {
+        const endpoint = isStaff ? '/api/staff/profile/' : '/api/customer/profile/';
+        const res = await fetch(endpoint, {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('avatarChar').textContent = data.username.charAt(0).toUpperCase();
+            document.getElementById('dispUsername').textContent = data.username;
+
+            const roleEl = document.getElementById('dispRole');
+            if (isStaff) {
+                roleEl.textContent = 'Staff Member';
+                roleEl.classList.add('role-staff');
+            } else {
+                roleEl.textContent = 'Customer';
+                roleEl.classList.add('role-customer');
+            }
+
+            document.getElementById('prof-fullname').value = data.full_name || '';
+            document.getElementById('prof-email').value = data.email || '';
+            document.getElementById('prof-dynamic').value = isStaff ? (data.position || '') : (data.phone || '');
+
+            document.getElementById('profileLoading').style.display = 'none';
+            document.getElementById('profileForm').style.display = 'block';
+        } else {
+            document.getElementById('profileLoading').innerHTML = '<p class="text-error">Failed to load profile. Please login again.</p>';
+        }
+    } catch (err) {
+        document.getElementById('profileLoading').innerHTML = '<p class="text-error">Network error loading profile.</p>';
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveBtn');
+        btn.textContent = 'Saving…';
+        btn.disabled = true;
+
+        const payload = {
+            full_name: document.getElementById('prof-fullname').value,
+            email: document.getElementById('prof-email').value
+        };
+        if (isStaff) payload.position = document.getElementById('prof-dynamic').value;
+        else         payload.phone = document.getElementById('prof-dynamic').value;
+
+        const endpoint = isStaff ? '/api/staff/profile/update/' : '/api/customer/profile/update/';
+        try {
+            const res = await fetch(endpoint, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                showToast('Profile updated successfully! ✨', 'success');
+            } else {
+                showToast('Failed to update profile', 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+        btn.textContent = 'Save Changes';
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

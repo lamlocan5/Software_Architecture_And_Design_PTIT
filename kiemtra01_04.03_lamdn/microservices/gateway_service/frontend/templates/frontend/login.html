@@ -1,0 +1,134 @@
+{% extends 'frontend/base.html' %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-container glass-elevated animate-fade-up">
+        <!-- Logo -->
+        <div class="auth-logo">
+            <div class="auth-logo-icon">⚡</div>
+            <h2 class="auth-title text-gradient">Welcome Back</h2>
+            <p class="auth-subtitle">Sign in or create your TechStore account</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+            <div class="tab" id="tab-register" onclick="switchTab('register')">Register</div>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form">
+            <div class="form-group">
+                <label for="login-username">Username</label>
+                <input type="text" id="login-username" class="form-input" placeholder="Enter your username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary w-full" style="margin-top:1.25rem;padding:0.875rem;" id="loginBtn">
+                Sign In →
+            </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" style="display:none;">
+            <div class="form-group">
+                <label for="reg-fullname">Full Name</label>
+                <input type="text" id="reg-fullname" class="form-input" placeholder="Your full name" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" class="form-input" placeholder="username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="reg-phone">Phone</label>
+                    <input type="text" id="reg-phone" class="form-input" placeholder="0912…" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="reg-email">Email</label>
+                <input type="email" id="reg-email" class="form-input" placeholder="you@email.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="reg-password">Password</label>
+                <input type="password" id="reg-password" class="form-input" placeholder="Create a password" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary w-full" style="margin-top:1.25rem;padding:0.875rem;" id="registerBtn">
+                Create Account →
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function switchTab(tab) {
+        document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+        document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        btn.textContent = 'Signing in…';
+        btn.disabled = true;
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        try {
+            const res = await fetch('/api/customer/login/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', username);
+                localStorage.setItem('isStaff', 'false');
+                showToast('Welcome back, ' + username + '! 🎉', 'success');
+                setTimeout(() => window.location.href = '/', 900);
+            } else {
+                showToast('Invalid username or password', 'error');
+                btn.textContent = 'Sign In →';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Cannot connect to server', 'error');
+            btn.textContent = 'Sign In →';
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        btn.textContent = 'Creating account…';
+        btn.disabled = true;
+        const username = document.getElementById('reg-username').value;
+        const full_name = document.getElementById('reg-fullname').value;
+        const phone = document.getElementById('reg-phone').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        try {
+            const res = await fetch('/api/customer/register/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, full_name, phone, email, password})
+            });
+            if (res.ok) {
+                showToast('Account created! Please sign in.', 'success');
+                switchTab('login');
+            } else {
+                showToast('Registration failed. Username may be taken.', 'error');
+            }
+        } catch (err) {
+            showToast('Cannot connect to server', 'error');
+        }
+        btn.textContent = 'Create Account →';
+        btn.disabled = false;
+    });
+</script>
+{% endblock %}

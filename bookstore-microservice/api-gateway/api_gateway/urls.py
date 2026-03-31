@@ -11,6 +11,10 @@ from api_gateway.views import (
     review_list, publisher_list,
     payment_list, shipment_list,
     publisher_edit,
+    clothes_list,
+    clothe_detail,
+    electronics_list,
+    electronic_detail,
 )
 from api_gateway.auth_views import login_view, logout_view, register_view
 
@@ -40,4 +44,8 @@ urlpatterns = [
     path('reviews/',                       review_list,    name='review_list'),
     path('publishers/',                    publisher_list, name='publisher_list'),
     path('publishers/<int:publisher_id>/edit/', publisher_edit, name='publisher_edit'),
+    path('clothes/',                       clothes_list,   name='clothes_list'),
+    path('clothes/<int:clothe_id>/',       clothe_detail,  name='clothe_detail'),
+    path('electronics/',                   electronics_list,   name='electronics_list'),
+    path('electronics/<int:electronic_id>/', electronic_detail,  name='electronic_detail'),
 ]

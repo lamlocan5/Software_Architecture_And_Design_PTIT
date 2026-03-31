@@ -1,0 +1,150 @@
+{% extends 'frontend/base.html' %}
+{% block content %}
+
+<div class="page-header animate-fade-up">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+            <h1>All Products</h1>
+            <p>Browse our full collection of laptops and mobile devices</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap;" id="filterBtns">
+            <button class="btn btn-secondary btn-sm filter-btn active" data-filter="all" onclick="applyFilter('all', this)">All</button>
+            <button class="btn btn-secondary btn-sm filter-btn" data-filter="laptop" onclick="applyFilter('laptop', this)">💻 Laptops</button>
+            <button class="btn btn-secondary btn-sm filter-btn" data-filter="mobile" onclick="applyFilter('mobile', this)">📱 Mobiles</button>
+        </div>
+    </div>
+</div>
+
+<div id="searchResultBanner" style="display:none; margin-bottom:1.5rem; padding:1rem 1.25rem; background:rgba(124,58,237,0.1); border:1px solid rgba(124,58,237,0.25); border-radius:0.875rem; color:#a78bfa; font-weight:500;"></div>
+
+<div id="allProducts" class="product-grid">
+    <!-- skeleton placeholders -->
+    <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:50%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+    <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:60%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+    <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:55%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+    <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:50%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+</div>
+
+<script>
+    let allProductsCache = [];
+    let activeFilter = 'all';
+
+    function productCardHTML(p, index) {
+        const isLaptop = p.type === 'laptop';
+        const badge = isLaptop
+            ? '<span class="product-type-badge badge-laptop">💻 Laptop</span>'
+            : '<span class="product-type-badge badge-mobile">📱 Mobile</span>';
+        const specs = isLaptop
+            ? `<strong>CPU:</strong> ${p.cpu}<br><strong>RAM:</strong> ${p.ram_gb} GB`
+            : `<strong>Chip:</strong> ${p.chipset}<br><strong>Storage:</strong> ${p.storage_gb} GB`;
+        return `
+            <div class="product-card glass" style="animation-delay:${index * 60}ms">
+                ${badge}
+                <div class="product-title">${p.model_name}</div>
+                <div class="product-specs">${specs}</div>
+                <div class="product-price">
+                    <span class="product-price-symbol">$</span>${parseFloat(p.price).toLocaleString()}
+                </div>
+                <button class="btn btn-primary w-full" onclick="addToCart(${p.id},'${p.model_name.replace(/'/g,"\\'")}',${p.price},'${p.type}')">
+                    Add to Cart
+                </button>
+            </div>
+        `;
+    }
+
+    function applyFilter(filter, btn) {
+        activeFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderProducts(allProductsCache);
+    }
+
+    function renderProducts(products) {
+        const container = document.getElementById('allProducts');
+        let filtered = products;
+        if (activeFilter !== 'all') {
+            filtered = products.filter(p => p.type === activeFilter);
+        }
+        if (!filtered.length) {
+            container.innerHTML = `
+                <div class="empty-state" style="grid-column:1/-1">
+                    <span class="empty-state-icon">🔍</span>
+                    <h3>No products found</h3>
+                    <p>Try a different search or filter.</p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = filtered.map((p, i) => productCardHTML(p, i)).join('');
+    }
+
+    async function loadAllProducts() {
+        try {
+            const [laptopRes, mobileRes] = await Promise.all([
+                fetch('/api/laptop/products/'),
+                fetch('/api/moblie/products/')
+            ]);
+            const laptopsData = await laptopRes.json();
+            const mobilesData = await mobileRes.json();
+
+            const laptops = (laptopsData.items || []).map(p => ({...p, type: 'laptop'}));
+            const mobiles = (mobilesData.items || []).map(p => ({...p, type: 'mobile'}));
+            allProductsCache = [...laptops, ...mobiles];
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            let displayed = allProductsCache;
+
+            if (query) {
+                const q = query.toLowerCase();
+                displayed = allProductsCache.filter(p =>
+                    p.model_name.toLowerCase().includes(q) ||
+                    (p.cpu && p.cpu.toLowerCase().includes(q)) ||
+                    (p.chipset && p.chipset.toLowerCase().includes(q))
+                );
+                allProductsCache = displayed; // restrict to search results
+                const banner = document.getElementById('searchResultBanner');
+                banner.style.display = 'block';
+                banner.innerHTML = `🔍 Search results for <strong>"${query}"</strong> — ${displayed.length} product(s) found. <a href="/products/" style="color:var(--text-muted);margin-left:.5rem;font-size:.85rem;">Clear ✕</a>`;
+            }
+
+            renderProducts(displayed);
+        } catch (err) {
+            console.error(err);
+            document.getElementById('allProducts').innerHTML = `
+                <div class="empty-state" style="grid-column:1/-1">
+                    <span class="empty-state-icon">⚠️</span>
+                    <h3>Failed to load products</h3>
+                    <p>Make sure all services are running.</p>
+                </div>`;
+        }
+    }
+
+    async function addToCart(productId, name, price, productType) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showToast('Please sign in to add to cart', 'error');
+            setTimeout(() => window.location.href = '/login/', 1200);
+            return;
+        }
+        try {
+            const res = await fetch('/api/customer/carts/items/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ product_id: productId, product_name: name, product_type: productType, quantity: 1, unit_price: price })
+            });
+            if (res.ok) {
+                showToast(`"${name}" added to cart!`, 'success');
+            } else {
+                showToast('Failed to add to cart', 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAllProducts);
+</script>
+{% endblock %}

@@ -1,0 +1,26 @@
+Tạo 1 file TXT chứa toàn bộ source code dự án (có header đường dẫn)
+
+Vì dự án rất lớn, không thể tạo trực tiếp trong Cursor chat. Bạn chạy script PowerShell dưới đây để xuất ra 1 file TXT trên máy của bạn.
+
+1) Mở PowerShell tại thư mục repo:
+   c:\Users\Admin\Desktop\PTIT\Y4_T2\SoftwareArchitectureAndDesign\bookstore-microservice
+
+2) Chạy script dump (mặc định sẽ tạo PROJECT_DUMP.txt ở repo root):
+
+   powershell -ExecutionPolicy Bypass -File .\tools\dump_project_to_txt.ps1
+
+3) (Tuỳ chọn) Đổi tên file output:
+
+   powershell -ExecutionPolicy Bypass -File .\tools\dump_project_to_txt.ps1 -OutFile .\docs\PROJECT_DUMP.txt
+
+4) (Tuỳ chọn) Không bỏ import trùng:
+
+   powershell -ExecutionPolicy Bypass -File .\tools\dump_project_to_txt.ps1 -SkipDuplicateImports:$false
+
+Ghi chú:
+- Script chỉ dump các file text phổ biến (.py, .md, .yml, .json, …) và bỏ qua file nhị phân.
+- Script bỏ qua các thư mục nặng/không cần cho “source dump” như: .git, node_modules, data, __pycache__, v.v.
+- Script **tự loại trừ** các file dễ chứa secret như: `.env`, `secrets.json`, `credentials.json`, `*.pem`, `*.key`, `*.pfx`, `*.p12`.
+- Mỗi file trong output đều có header:
+  PATH: <đường_dẫn_tương_đối_trong_repo>
+

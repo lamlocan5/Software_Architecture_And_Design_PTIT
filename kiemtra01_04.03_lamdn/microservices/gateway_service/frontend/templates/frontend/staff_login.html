@@ -1,0 +1,68 @@
+{% extends 'frontend/base.html' %}
+{% block content %}
+<div class="auth-wrapper">
+    <div class="staff-login-container glass-elevated animate-fade-up">
+        <div class="auth-logo">
+            <div class="auth-logo-icon" style="background:linear-gradient(135deg,#0ea5e9,#6366f1);">🔐</div>
+            <h2 class="auth-title" style="background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Staff Access</h2>
+            <p class="auth-subtitle">Restricted area — authorized personnel only</p>
+        </div>
+
+        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:0.75rem;padding:0.875rem 1rem;margin-bottom:1.75rem;color:#7dd3fc;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;">
+            ℹ️ Use your staff credentials to access the management dashboard.
+        </div>
+
+        <form id="staff-login-form">
+            <div class="form-group">
+                <label for="login-username">Staff Username</label>
+                <input type="text" id="login-username" class="form-input" placeholder="Enter username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary w-full" style="margin-top:1.25rem;padding:.875rem;" id="staffLoginBtn">
+                Access Dashboard →
+            </button>
+        </form>
+
+        <p style="text-align:center;margin-top:1.5rem;font-size:0.82rem;color:var(--text-muted);">
+            <a href="/" style="color:var(--text-muted);text-decoration:none;">← Back to store</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('staff-login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('staffLoginBtn');
+        btn.textContent = 'Authenticating…';
+        btn.disabled = true;
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        try {
+            const res = await fetch('/api/staff/login/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', username);
+                localStorage.setItem('isStaff', 'true');
+                showToast('Welcome, ' + username + '! Redirecting…', 'success');
+                setTimeout(() => window.location.href = '/', 900);
+            } else {
+                showToast('Invalid credentials. Please try again.', 'error');
+                btn.textContent = 'Access Dashboard →';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Cannot connect to server', 'error');
+            btn.textContent = 'Access Dashboard →';
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'frontend/base.html' %}
+
+{% block content %}
+<div class="cart-wrapper animate-fade-up">
+    <div class="cart-header">
+        <div>
+            <h1>Your Cart 🛒</h1>
+            <p class="text-muted text-sm" style="margin-top:.25rem;">Review your items before checkout</p>
+        </div>
+        <a href="/products/" class="btn btn-secondary">← Continue Shopping</a>
+    </div>
+
+    <div id="cartItems" class="cart-list">
+        <div class="glass" style="padding:2rem;text-align:center;">
+            <p class="text-muted">Loading your cart…</p>
+        </div>
+    </div>
+
+    <div class="cart-summary glass" id="cartSummaryBlock" style="display:none;">
+        <div class="cart-total-row">
+            <span class="cart-total-label">Total</span>
+            <span class="cart-total-value" id="cartTotalValue">$0</span>
+        </div>
+        <button class="btn btn-primary w-full" onclick="checkout()" style="padding:.875rem;font-size:1rem;">
+            Proceed to Checkout →
+        </button>
+    </div>
+</div>
+
+<script>
+    async function loadCart() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            document.getElementById('cartItems').innerHTML = `
+                <div class="empty-state glass" style="padding:3rem;">
+                    <span class="empty-state-icon">🔒</span>
+                    <h3>Please sign in</h3>
+                    <p>You need to be logged in to view your cart.</p>
+                    <a href="/login/" class="btn btn-primary">Sign In</a>
+                </div>`;
+            return;
+        }
+        try {
+            const res = await fetch('/api/customer/carts/', {
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            if (res.ok) {
+                const data = await res.json();
+                renderCart(data);
+            } else {
+                showEmptyCart();
+            }
+        } catch (err) {
+            document.getElementById('cartItems').innerHTML = `<p class="text-error" style="text-align:center;padding:2rem;">Failed to load cart.</p>`;
+        }
+    }
+
+    function showEmptyCart() {
+        document.getElementById('cartItems').innerHTML = `
+            <div class="empty-state glass" style="padding:3rem;">
+                <span class="empty-state-icon">🛒</span>
+                <h3>Your cart is empty</h3>
+                <p>Add some products and they'll appear here.</p>
+                <a href="/products/" class="btn btn-primary">Start Shopping</a>
+            </div>`;
+        document.getElementById('cartSummaryBlock').style.display = 'none';
+    }
+
+    function renderCart(cartData) {
+        const items = cartData.items || [];
+        if (!items.length) { showEmptyCart(); return; }
+
+        let total = 0;
+        document.getElementById('cartItems').innerHTML = items.map(item => {
+            const itemTotal = (item.quantity * item.price);
+            total += itemTotal;
+            return `
+                <div class="cart-item glass">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.product_name}</div>
+                        <div class="cart-item-meta">$${parseFloat(item.price).toFixed(2)} each &bull; Qty: ${item.quantity}</div>
+                    </div>
+                    <div class="cart-item-right">
+                        <div class="cart-item-price">$${itemTotal.toFixed(2)}</div>
+                        <button class="btn btn-danger btn-sm" onclick="deleteItem(${item.id})">Remove</button>
+                    </div>
+                </div>`;
+        }).join('');
+
+        const finalTotal = cartData.total_price || total;
+        document.getElementById('cartTotalValue').textContent = `$${parseFloat(finalTotal).toFixed(2)}`;
+        document.getElementById('cartSummaryBlock').style.display = 'block';
+    }
+
+    async function deleteItem(itemId) {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`/api/customer/carts/items/${itemId}/delete/`, {
+                method: 'DELETE',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            if (res.ok) {
+                showToast('Item removed from cart', 'info');
+                loadCart();
+            } else {
+                showToast('Failed to remove item', 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+    }
+
+    async function checkout() {
+        const token = localStorage.getItem('token');
+        if (!token) { showToast('Please log in', 'error'); return; }
+        try {
+            const res = await fetch('/api/customer/carts/checkout/', {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            if (res.ok) {
+                showToast('Checkout successful! Thank you for your purchase. 🎉', 'success', 5000);
+                loadCart();
+            } else {
+                showToast('Checkout failed. Please try again.', 'error');
+            }
+        } catch (err) {
+            showToast('Error during checkout', 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

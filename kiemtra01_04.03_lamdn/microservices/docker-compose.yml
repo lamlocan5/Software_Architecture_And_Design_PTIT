@@ -1,0 +1,134 @@
+services:
+  mysql_staff:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: staff_db
+      MYSQL_ROOT_PASSWORD: "123456789"
+    ports: ["3311:3306"]
+    volumes: [mysql_staff_data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mysql_customer:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: customer_db
+      MYSQL_ROOT_PASSWORD: "123456789"
+    ports: ["3312:3306"]
+    volumes: [mysql_customer_data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres_laptop:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: laptop_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: "1234"
+    ports: ["5435:5432"]
+    volumes: [postgres_laptop_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d laptop_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres_moblie:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: moblie_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: "1234"
+    ports: ["5436:5432"]
+    volumes: [postgres_moblie_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d moblie_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  staff_service:
+    build: { context: ., dockerfile: staff_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: staff_db
+      DB_USER: root
+      DB_PASSWORD: "123456789"
+      DB_HOST: mysql_staff
+      DB_PORT: "3306"
+    command: sh -c "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      mysql_staff: { condition: service_healthy }
+    volumes: ["./staff_service:/app"]
+
+  customer_service:
+    build: { context: ., dockerfile: customer_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: customer_db
+      DB_USER: root
+      DB_PASSWORD: "123456789"
+      DB_HOST: mysql_customer
+      DB_PORT: "3306"
+    command: sh -c "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      mysql_customer: { condition: service_healthy }
+    volumes: ["./customer_service:/app"]
+
+  laptop_service:
+    build: { context: ., dockerfile: laptop_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: laptop_db
+      DB_USER: app_user
+      DB_PASSWORD: "1234"
+      DB_HOST: postgres_laptop
+      DB_PORT: "5432"
+    command: sh -c "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      postgres_laptop: { condition: service_healthy }
+    volumes: ["./laptop_service:/app"]
+
+  moblie_service:
+    build: { context: ., dockerfile: moblie_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: moblie_db
+      DB_USER: app_user
+      DB_PASSWORD: "1234"
+      DB_HOST: postgres_moblie
+      DB_PORT: "5432"
+    command: sh -c "python manage.py makemigrations api && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      postgres_moblie: { condition: service_healthy }
+    volumes: ["./moblie_service:/app"]
+
+  api_gateway:
+    build: { context: ., dockerfile: gateway_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    working_dir: /app
+    ports: ["8000:8000"]
+    volumes: ["./gateway_service:/app"]
+    depends_on:
+      - staff_service
+      - customer_service
+      - laptop_service
+      - moblie_service
+
+volumes:
+  mysql_staff_data:
+  mysql_customer_data:
+  postgres_laptop_data:
+  postgres_moblie_data:

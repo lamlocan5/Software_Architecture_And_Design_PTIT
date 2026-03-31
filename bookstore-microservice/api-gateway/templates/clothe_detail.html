@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết quần áo{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold mb-1">{{ clothe.name }}</h2>
+        <p class="text-muted mb-0">Xem chi tiết sản phẩm quần áo và thêm vào giỏ hàng cùng với sách.</p>
+    </div>
+    <div class="col-auto">
+        <a href="/clothes/" class="btn btn-outline-secondary">Quay lại danh sách</a>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message.type }} alert-dismissible fade show mb-4" role="alert">
+    <span>{{ message.text }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                Thông tin sản phẩm
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>ID:</strong> #{{ clothe.id }}</p>
+                <p class="mb-1"><strong>Tên:</strong> {{ clothe.name }}</p>
+                <p class="mb-1"><strong>Size:</strong> {{ clothe.size|default:"—" }}</p>
+                <p class="mb-1"><strong>Màu sắc:</strong> {{ clothe.color|default:"—" }}</p>
+                <p class="mb-1">
+                    <strong>Loại:</strong>
+                    {% if clothe.category_detail %}
+                        {{ clothe.category_detail.name }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </p>
+                <p class="mb-1">
+                    <strong>Giá:</strong>
+                    <span class="badge py-2 px-3" style="background:#d1e7dd; color:#0a3622;">
+                        {{ clothe.price|floatformat:0 }} ₫
+                    </span>
+                </p>
+                <p class="mb-0">
+                    <strong>Tồn kho:</strong>
+                    {% if clothe.stock > 5 %}
+                        <span class="badge bg-success">{{ clothe.stock }}</span>
+                    {% elif clothe.stock > 0 %}
+                        <span class="badge bg-warning text-dark">{{ clothe.stock }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">Hết hàng</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header" style="background:#fff3cd; color:#664d03;">
+                Thêm vào giỏ hàng
+            </div>
+            <div class="card-body">
+                {% if not customer_id %}
+                    <p class="text-muted">Bạn cần đăng nhập và có hồ sơ khách hàng để thêm vào giỏ.</p>
+                    <a href="/login/" class="btn btn-primary">Đăng nhập</a>
+                {% else %}
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-uppercase text-muted">Số lượng</label>
+                            <input type="number" name="quantity" class="form-control" value="1" min="1" max="99" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" {% if clothe.stock <= 0 %}disabled{% endif %}>
+                            Thêm vào giỏ hàng
+                        </button>
+                        <p class="small text-muted mt-2 mb-0">
+                            Sản phẩm sẽ được thêm vào cùng giỏ hàng với sách và các sản phẩm khác.
+                        </p>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

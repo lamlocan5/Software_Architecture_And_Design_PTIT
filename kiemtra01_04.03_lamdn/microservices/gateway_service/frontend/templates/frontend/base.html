@@ -1,0 +1,129 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TechStore – Premium laptops and mobile devices powered by microservices.">
+    <title>TechStore — Premium Tech</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+</head>
+<body>
+
+    <!-- Floating Navbar -->
+    <nav class="navbar glass">
+        <div class="nav-brand">
+            <a href="/">TechStore</a>
+        </div>
+        <div class="nav-links">
+            <form class="nav-search" onsubmit="navSearch(event)">
+                <input type="text" id="navSearchInput" placeholder="Search…" autocomplete="off">
+                <button type="submit" title="Search">🔍</button>
+            </form>
+            <a href="/products/" id="navProductsLink">Products</a>
+            <a href="/cart/" id="navCartLink" style="position: relative;">
+                🛒 Cart
+                <span id="cartBadge"></span>
+            </a>
+            <a href="/profile/" id="navProfileLink" style="display:none;">Profile</a>
+            <a href="/staff/dashboard/" id="navAdminLink" style="display:none;">Dashboard</a>
+            <a href="/staff/products/" id="navManageLink" style="display:none;">Manage</a>
+            <span id="navUserArea">
+                <a href="/login/" class="btn btn-primary btn-nav">Sign In</a>
+            </span>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <span class="footer-brand">⚡ TechStore</span>
+            <span>Microservices-powered e-commerce · PTIT 2024</span>
+            <span>Built with Django & ❤️</span>
+        </div>
+    </footer>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <script src="{% static 'frontend/app.js' %}"></script>
+    <script>
+        /* ── Toast Notification System ── */
+        function showToast(message, type = 'info', duration = 3500) {
+            const icons = { success: '✓', error: '✕', info: 'ℹ' };
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type]}</div>
+                <span class="toast-text">${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-out');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        /* ── Active nav link highlight ── */
+        function setActiveNav() {
+            const path = window.location.pathname;
+            document.querySelectorAll('.nav-links a').forEach(a => {
+                if (a.getAttribute('href') && path.startsWith(a.getAttribute('href')) && a.getAttribute('href') !== '/') {
+                    a.classList.add('nav-link-active');
+                } else if (a.getAttribute('href') === '/' && path === '/') {
+                    a.classList.add('nav-link-active');
+                }
+            });
+        }
+
+        /* ── Populate nav based on auth state ── */
+        document.addEventListener('DOMContentLoaded', () => {
+            setActiveNav();
+            const token = localStorage.getItem('token');
+            const navUserArea = document.getElementById('navUserArea');
+            if (token) {
+                document.getElementById('navProfileLink').style.display = 'inline';
+                const isStaff = localStorage.getItem('isStaff') === 'true';
+                if (isStaff) {
+                    document.getElementById('navAdminLink').style.display = 'inline';
+                    document.getElementById('navManageLink').style.display = 'inline';
+                    document.getElementById('navCartLink').style.display = 'none';
+                }
+                const username = localStorage.getItem('username') || 'You';
+                navUserArea.innerHTML = `
+                    <button onclick="logout()" class="btn btn-secondary btn-nav" style="font-size:0.82rem; padding:0.45rem 1rem;">
+                        Logout
+                    </button>
+                `;
+            }
+        });
+
+        function navSearch(e) {
+            e.preventDefault();
+            const q = document.getElementById('navSearchInput').value.trim();
+            if (!q) return;
+            const isStaff = localStorage.getItem('isStaff') === 'true';
+            if (isStaff && window.location.pathname.startsWith('/staff/')) {
+                window.location.href = `/staff/products/?q=${encodeURIComponent(q)}`;
+            } else {
+                window.location.href = `/products/?q=${encodeURIComponent(q)}`;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('isStaff');
+            showToast('Logged out successfully', 'info', 2000);
+            setTimeout(() => { window.location.href = '/login/'; }, 800);
+        }
+    </script>
+</body>
+</html>

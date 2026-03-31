@@ -1,0 +1,237 @@
+PIPELINE + SEQUENCE DIAGRAM — CART SERVICE (bookstore-microservice)
+
+Generated: 2026-03-17
+
+================================================================
+1) PIPELINE (các bước triển khai / chạy cart-service)
+================================================================
+
+Mục tiêu:
+- Build và chạy riêng `cart-service` hoặc chạy cùng toàn bộ hệ thống bằng Docker Compose.
+- `cart-service` cung cấp API giỏ hàng và gọi sang `book-service` để kiểm tra tồn tại book khi thêm vào giỏ.
+
+---------------------------------------------------------------
+1.1. Vị trí cấu hình trong dự án
+---------------------------------------------------------------
+
+- docker-compose:
+  - Path: `docker-compose.yml`
+  - Service:
+    - `cart-service`
+      - build: `./cart-service`
+      - ports: `8003:8000`
+      - volumes: `./data/cart:/app/data`
+
+Ý nghĩa:
+- Container lắng nghe port 8000, máy host map ra 8003.
+- DB sqlite (và data) nằm trong `/app/data` (persist nhờ volume `./data/cart`).
+
+---------------------------------------------------------------
+1.2. Pipeline build/run (Docker)
+---------------------------------------------------------------
+
+A) Chạy riêng cart-service
+
+  docker-compose up --build cart-service
+
+B) Chạy toàn bộ hệ thống (khuyến nghị khi demo UI)
+
+  docker-compose up --build
+
+---------------------------------------------------------------
+1.3. Startup pipeline bên trong container (Dockerfile CMD)
+---------------------------------------------------------------
+
+- Path: `cart-service/Dockerfile`
+- CMD đang chạy chuỗi lệnh:
+
+  mkdir -p data
+  python manage.py makemigrations app
+  python manage.py migrate
+  python manage.py runserver 0.0.0.0:8000
+
+Ý nghĩa:
+- Tạo thư mục `data` để chứa SQLite DB.
+- Tạo migrations cho app `app`, migrate DB.
+- Chạy Django dev server trên 0.0.0.0 để container nhận request từ ngoài.
+
+---------------------------------------------------------------
+1.4. API endpoints của cart-service
+---------------------------------------------------------------
+
+- Path: `cart-service/cart_service/urls.py`
+- Các endpoint:
+  - POST  `/carts/`                  -> tạo cart
+  - POST  `/carts/add-item/`         -> thêm item vào cart
+  - GET   `/carts/<customer_id>/`    -> xem item trong cart theo customer_id
+  - GET   `/carts/customer/<customer_id>/` -> lấy thông tin cart (bao gồm cart id) theo customer_id
+
+Khi chạy bằng docker-compose:
+- Từ host gọi: `http://localhost:8003/...`
+- Từ nội bộ docker network, service khác gọi: `http://cart-service:8000/...`
+
+---------------------------------------------------------------
+1.5. Model dữ liệu (ở mức service)
+---------------------------------------------------------------
+
+- Path: `cart-service/app/models.py`
+- Models:
+  - Cart(customer_id)
+  - CartItem(cart FK -> Cart, book_id, quantity)
+
+Ghi chú:
+- `book_id` và `customer_id` là integer “tham chiếu” sang context khác (book-service, customer-service).
+
+================================================================
+2) SEQUENCE DIAGRAM — QUÁ TRÌNH TẠO CART
+================================================================
+
+Trong dự án của bạn có 2 luồng tạo cart quan trọng:
+
+Luồng A) Auto-create cart khi tạo customer (đúng theo code hiện tại)
+Luồng B) Tạo cart trực tiếp bằng cách gọi cart-service `/carts/`
+
+---------------------------------------------------------------
+2.1. Luồng A — Tạo Customer -> tự động tạo Cart
+---------------------------------------------------------------
+
+Code nguồn liên quan:
+- `customer-service/app/views.py`
+  - Class: `CustomerListCreate`
+  - Method: `post()`
+  - Gọi:
+    - `POST http://cart-service:8000/carts/` với JSON `{ "customer_id": customer.id }`
+
+- `cart-service/app/views.py`
+  - Class: `CartCreate`
+  - Method: `post()`
+  - Tạo bản ghi Cart bằng `CartSerializer(...).save()`
+
+Sequence Diagram (Mermaid):
+
+sequenceDiagram
+  autonumber
+  actor Client as Client / api-gateway / tester
+  participant Customer as customer-service
+  participant Cart as cart-service
+  participant DbC as customer DB (sqlite)
+  participant DbCart as cart DB (sqlite)
+
+  Client->>Customer: POST /customers/ (name, email)
+  Customer->>DbC: INSERT Customer
+  DbC-->>Customer: customer{id}
+  Customer->>Cart: POST /carts/ {customer_id}
+  Cart->>DbCart: INSERT Cart(customer_id)
+  DbCart-->>Cart: cart{id, customer_id}
+  Cart-->>Customer: 200 {cart...}
+  Customer-->>Client: 200 {customer...}
+
+Lưu ý thiết kế:
+- customer-service hiện **không kiểm tra** response tạo cart (không retry, không rollback).
+- Nếu cart-service lỗi, customer vẫn được tạo → có thể dẫn đến customer không có cart.
+
+---------------------------------------------------------------
+2.2. Luồng B — Tạo cart trực tiếp bằng cart-service
+---------------------------------------------------------------
+
+Code nguồn liên quan:
+- `cart-service/cart_service/urls.py`: `POST /carts/`
+- `cart-service/app/views.py`: `CartCreate.post()`
+
+Sequence Diagram (Mermaid):
+
+sequenceDiagram
+  autonumber
+  actor Client as Client / api-gateway / tester
+  participant Cart as cart-service
+  participant DbCart as cart DB (sqlite)
+
+  Client->>Cart: POST /carts/ {customer_id}
+  Cart->>DbCart: INSERT Cart(customer_id)
+  DbCart-->>Cart: cart{id, customer_id}
+  Cart-->>Client: 200 {cart...}
+
+---------------------------------------------------------------
+2.3. (Liên quan) Thêm item vào cart có check book-service
+---------------------------------------------------------------
+
+Code nguồn liên quan:
+- `cart-service/app/views.py`: `AddCartItem.post()`
+  - Gọi `GET http://book-service:8000/books/`
+  - Check `book_id` có tồn tại không
+  - Nếu hợp lệ -> tạo CartItem
+
+Sequence Diagram (Mermaid):
+
+sequenceDiagram
+  autonumber
+  actor Client as Client / api-gateway
+  participant Cart as cart-service
+  participant Book as book-service
+  participant DbCart as cart DB (sqlite)
+
+  Client->>Cart: POST /carts/add-item/ {cart, book_id, quantity}
+  Cart->>Book: GET /books/
+  Book-->>Cart: 200 [books...]
+  alt book_id not found
+    Cart-->>Client: 200 {error: \"Book not found\"}
+  else book_id exists
+    Cart->>DbCart: INSERT CartItem(cart, book_id, quantity)
+    DbCart-->>Cart: cart_item{id...}
+    Cart-->>Client: 200 {cart_item...}
+  end
+
+END
+
+================================================================
+3) SEQUENCE DIAGRAM (MERMAID) DÙNG CHO TOOL VẼ
+================================================================
+
+Bạn có thể copy block dưới đây vào file .md hoặc tool như mermaid.live để render hình:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as User (qua API Gateway)
+  participant Gateway as api-gateway
+  participant CustomerSvc as customer-service
+  participant CartSvc as cart-service
+  participant BookSvc as book-service
+  participant DbCustomer as DB Customer
+  participant DbCart as DB Cart
+
+  rect rgb(230,230,255)
+    Note over User,CustomerSvc: Bước 1 - Tạo Customer -> auto tạo Cart
+
+    User->>Gateway: Đăng ký khách hàng (form /register hoặc POST /customers/)
+    Gateway->>CustomerSvc: POST /customers/ {name, email, ...}
+    CustomerSvc->>DbCustomer: INSERT Customer
+    DbCustomer-->>CustomerSvc: customer{id}
+    CustomerSvc->>CartSvc: POST /carts/ {customer_id: customer.id}
+    CartSvc->>DbCart: INSERT Cart(customer_id)
+    DbCart-->>CartSvc: cart{id, customer_id}
+    CartSvc-->>CustomerSvc: 200 {cart...}
+    CustomerSvc-->>Gateway: 200 {customer...}
+    Gateway-->>User: Hiển thị khách hàng mới (đồng thời đã có cart rỗng)
+  end
+
+  rect rgb(230,255,230)
+    Note over User,CartSvc: Bước 2 - Thêm sách vào giỏ
+
+    User->>Gateway: Thêm vào giỏ hàng (nút trên trang chi tiết sách)
+    Gateway->>CartSvc: POST /carts/add-item/ {cart, book_id, quantity}
+    CartSvc->>BookSvc: GET /books/
+    BookSvc-->>CartSvc: 200 [danh sách books]
+    alt book_id không tồn tại
+      CartSvc-->>Gateway: 200 {error: "Book not found"}
+      Gateway-->>User: Thông báo lỗi "Book not found"
+    else book_id hợp lệ
+      CartSvc->>DbCart: INSERT CartItem(cart, book_id, quantity)
+      DbCart-->>CartSvc: cart_item{id,...}
+      CartSvc-->>Gateway: 200 {cart_item...}
+      Gateway-->>User: Giỏ hàng hiển thị item mới
+    end
+  end
+```
+
+

@@ -1,0 +1,126 @@
+{% extends 'frontend/base.html' %}
+
+{% block content %}
+<!-- HERO -->
+<section class="hero animate-fade-up">
+    <div class="hero-badge">✨ Next-gen tech marketplace</div>
+    <h1>
+        Discover<br>
+        <span class="text-gradient">Premium Tech</span>
+    </h1>
+    <p>Explore our curated collection of high-performance laptops and the latest mobile devices — all powered by distributed microservices.</p>
+    <div class="hero-actions">
+        <a href="/products/" class="btn btn-primary" style="padding: 0.875rem 2rem; font-size: 1rem;">
+            Browse All Products →
+        </a>
+        <a href="/login/" class="btn btn-secondary" style="padding: 0.875rem 2rem; font-size: 1rem;">
+            Sign In to Buy
+        </a>
+    </div>
+</section>
+
+<!-- LAPTOPS SECTION -->
+<section style="margin-top: 1rem;">
+    <div class="section-header">
+        <span class="section-label label-laptop">💻 Laptops</span>
+        <h2 style="font-size: 1.6rem;">Featured Laptops</h2>
+    </div>
+    <div id="laptopList" class="product-grid">
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:50%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:60%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:55%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+    </div>
+</section>
+
+<!-- MOBILES SECTION -->
+<section style="margin-top: 4rem;">
+    <div class="section-header">
+        <span class="section-label label-mobile">📱 Mobiles</span>
+        <h2 style="font-size: 1.6rem;">Latest Mobiles</h2>
+    </div>
+    <div id="mobileList" class="product-grid">
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:50%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:60%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+        <div class="skeleton-card glass"><div class="skeleton skeleton-line" style="width:55%;height:14px;"></div><div class="skeleton skeleton-line" style="width:80%;height:10px;margin-top:.5rem;"></div><div class="skeleton skeleton-line" style="width:70%;height:10px;margin-top:.25rem;"></div><div class="skeleton skeleton-line" style="width:40%;height:20px;margin-top:1rem;"></div></div>
+    </div>
+</section>
+
+<script>
+    function productCardHTML(p, type, index) {
+        const isLaptop = type === 'laptop';
+        const badge = isLaptop
+            ? '<span class="product-type-badge badge-laptop">💻 Laptop</span>'
+            : '<span class="product-type-badge badge-mobile">📱 Mobile</span>';
+        const specs = isLaptop
+            ? `<strong>CPU:</strong> ${p.cpu}<br><strong>RAM:</strong> ${p.ram_gb} GB`
+            : `<strong>Chip:</strong> ${p.chipset}<br><strong>Storage:</strong> ${p.storage_gb} GB`;
+        return `
+            <div class="product-card glass" style="animation-delay:${index * 80}ms">
+                ${badge}
+                <div class="product-title">${p.model_name}</div>
+                <div class="product-specs">${specs}</div>
+                <div class="product-price">
+                    <span class="product-price-symbol">$</span>${parseFloat(p.price).toLocaleString()}
+                </div>
+                <button class="btn btn-primary w-full" onclick="addToCart(${p.id},'${p.model_name.replace(/'/g,"\\'")}',${p.price},'${type}')">
+                    Add to Cart
+                </button>
+            </div>
+        `;
+    }
+
+    async function loadProducts() {
+        try {
+            const [laptopRes, mobileRes] = await Promise.all([
+                fetch('/api/laptop/products/'),
+                fetch('/api/moblie/products/')
+            ]);
+            const laptopsData = await laptopRes.json();
+            const mobilesData = await mobileRes.json();
+            renderList('laptopList', laptopsData.items || [], 'laptop');
+            renderList('mobileList', mobilesData.items || [], 'mobile');
+        } catch (err) {
+            console.error(err);
+            document.getElementById('laptopList').innerHTML = '<p class="text-muted">Failed to load products.</p>';
+            document.getElementById('mobileList').innerHTML = '';
+        }
+    }
+
+    function renderList(id, items, type) {
+        const el = document.getElementById(id);
+        if (!items.length) {
+            el.innerHTML = '<p class="text-muted">No products found.</p>';
+            return;
+        }
+        el.innerHTML = items.map((p, i) => productCardHTML(p, type, i)).join('');
+    }
+
+    async function addToCart(productId, name, price, productType) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showToast('Please sign in to add to cart', 'error');
+            setTimeout(() => window.location.href = '/login/', 1200);
+            return;
+        }
+        try {
+            const res = await fetch('/api/customer/carts/items/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ product_id: productId, product_name: name, product_type: productType, quantity: 1, unit_price: price })
+            });
+            if (res.ok) {
+                showToast(`"${name}" added to cart!`, 'success');
+            } else {
+                showToast('Failed to add to cart', 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+{% endblock %}
