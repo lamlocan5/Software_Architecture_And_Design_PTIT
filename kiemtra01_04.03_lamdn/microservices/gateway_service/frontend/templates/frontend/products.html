@@ -137,6 +137,16 @@
             });
             if (res.ok) {
                 showToast(`"${name}" added to cart!`, 'success');
+                // Track behaviour
+                if (typeof advisorTrack === 'function') {
+                    advisorTrack({
+                        product_id:   productId,
+                        product_name: name,
+                        product_type: productType,
+                        action:       'add_to_cart',
+                        price:        price,
+                    });
+                }
             } else {
                 showToast('Failed to add to cart', 'error');
             }

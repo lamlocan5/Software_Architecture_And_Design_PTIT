@@ -1,0 +1,18 @@
+    <!-- Cart Drawer Overlay -->
+    <div class="cart-drawer-overlay" id="cartOverlay" onclick="closeCart()"></div>
+    <!-- Cart Drawer -->
+    <div class="cart-drawer" id="cartDrawer">
+        <div class="cart-header">
+            <h3>🛒 Giỏ hàng của bạn</h3>
+            <button class="modal-close" onclick="closeCart()">✕</button>
+        </div>
+        <div class="cart-body" id="cartBody"></div>
+        <div class="cart-footer" id="cartFooter" style="display:none;">
+            <div class="cart-total-row">
+                <span class="cart-total-label">Tổng cộng:</span>
+                <span class="cart-total-price" id="cartTotalPrice">$0</span>
+            </div>
+            <button class="btn-checkout" onclick="openCheckoutModal()">🎉 Thanh toán</button>
+            <button class="btn-clear-cart" onclick="clearCart()">Xóa tất cả</button>
+        </div>
+    </div>

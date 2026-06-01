@@ -126,9 +126,65 @@ services:
       - customer_service
       - laptop_service
       - moblie_service
+      - advisor_service
+
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    ports: ["8001:8000"]
+    volumes: [chromadb_data:/chroma/chroma]
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+
+  postgres_advisor:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: advisor_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: "1234"
+    ports: ["5438:5432"]
+    volumes: [postgres_advisor_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d advisor_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  advisor_service:
+    build: { context: ., dockerfile: advisor_service/Dockerfile }
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: advisor_db
+      DB_USER: app_user
+      DB_PASSWORD: "1234"
+      DB_HOST: postgres_advisor
+      DB_PORT: "5432"
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: "8000"
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    command: >
+      sh -c "python manage.py makemigrations api &&
+             python manage.py migrate &&
+             (python api/seed_kb.py || echo 'KB seed skipped, will retry via API') &&
+             python manage.py runserver 0.0.0.0:8000"
+
+    depends_on:
+      postgres_advisor: { condition: service_healthy }
+      chromadb: { condition: service_healthy }
+    volumes: ["./advisor_service:/app"]
 
 volumes:
   mysql_staff_data:
   mysql_customer_data:
   postgres_laptop_data:
   postgres_moblie_data:
+  postgres_advisor_data:
+  chromadb_data:

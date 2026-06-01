@@ -15,7 +15,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
+    # CommonMiddleware bị bỏ vì nó validate RFC 1034/1035 hostname
+    # mà Docker service name có dấu gạch dưới (laptop_service) không hợp lệ
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

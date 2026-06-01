@@ -1,0 +1,118 @@
+version: "3.9"
+
+networks:
+  shopai-net:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+
+services:
+  # ─── Infrastructure ───────────────────────────────
+  neo4j:
+    image: neo4j:5.20
+    container_name: shopai-neo4j
+    ports:
+      - "7474:7474"   # Browser UI
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: neo4j/123456789
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j-data:/data
+    networks: [shopai-net]
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:7474"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Auth Service :8001 ───────────────────────────
+  auth-service:
+    build: ./auth-service
+    container_name: shopai-auth
+    ports:
+      - "8001:8001"
+    environment:
+      JWT_SECRET: shopai-secret-2026
+    networks: [shopai-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── Product Service :8002 ────────────────────────
+  product-service:
+    build: ./product-service
+    container_name: shopai-product
+    ports:
+      - "8002:8002"
+    environment:
+      JWT_SECRET: shopai-secret-2026
+    networks: [shopai-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── Cart Service :8003 ───────────────────────────
+  cart-service:
+    build: ./cart-service
+    container_name: shopai-cart
+    ports:
+      - "8003:8003"
+    environment:
+      JWT_SECRET: shopai-secret-2026
+    networks: [shopai-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── Recommender AI Service :8004 ────────────────
+  recommender-ai-service:
+    build: ./recommender-ai-service
+    container_name: shopai-ai
+    ports:
+      - "8004:8004"
+    environment:
+      JWT_SECRET:     shopai-secret-2026
+      NEO4J_URI:      bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: "123456789"
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DATA_PATH:      /data/data_user500.csv
+      MODEL_PATH:     /models/model_best.keras
+    volumes:
+      - ./data:/data:ro
+      - ./models:/models:ro
+    networks: [shopai-net]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Frontend Streamlit :8501 ─────────────────────
+  frontend:
+    build: ./frontend
+    container_name: shopai-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8001
+      PRODUCT_SERVICE_URL: http://product-service:8002
+      CART_SERVICE_URL: http://cart-service:8003
+      AI_SERVICE_URL: http://recommender-ai-service:8004
+    networks: [shopai-net]
+    depends_on:
+      - auth-service
+      - product-service
+      - cart-service
+      - recommender-ai-service

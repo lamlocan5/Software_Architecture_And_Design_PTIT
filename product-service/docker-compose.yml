@@ -1,0 +1,183 @@
+services:
+  # ==========================================
+  # PostgreSQL KHÔNG chạy trong Docker.
+  # Cài PostgreSQL trên Windows (vd. PG 18), tạo laptop_db / mobile_db, bật service lắng nghe 5432.
+  # - pgAdmin: Host localhost, Port 5432, user/pass trong .env
+  # - Các container bên dưới: POSTGRES_HOST=host.docker.internal (vào Postgres trên máy host)
+  # ==========================================
+
+  # ==========================================
+  # MICROSERVICES
+  # ==========================================
+  laptop-service:
+    build:
+      context: ./laptop-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - POSTGRES_DB=${LAPTOP_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5432
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - micro-network
+
+  mobile-service:
+    build:
+      context: ./mobile-service
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - POSTGRES_DB=${MOBILE_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5432
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - micro-network
+
+  staff-service:
+    build:
+      context: ./staff-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - MYSQL_DB=staff_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - LAPTOP_SERVICE_URL=http://laptop-service:8003
+      - MOBILE_SERVICE_URL=http://mobile-service:8004
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - micro-network
+    command: >-
+      sh -c "python create_db.py && python manage.py migrate && python manage.py runserver 0.0.0.0:8002"
+
+  customer-service:
+    build:
+      context: ./customer-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - MYSQL_DB=customer_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - LAPTOP_SERVICE_URL=http://laptop-service:8003
+      - MOBILE_SERVICE_URL=http://mobile-service:8004
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - micro-network
+    command: >-
+      sh -c "python create_db.py && python manage.py migrate && python manage.py runserver 0.0.0.0:8001"
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - MYSQL_DB=order_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - CUSTOMER_SERVICE_URL=http://customer-service:8001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - micro-network
+    depends_on:
+      - customer-service
+
+  advisory-service:
+    build:
+      context: ./advisory-service
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - CUSTOMER_SERVICE_URL=http://customer-service:8001
+      - ORDER_SERVICE_URL=http://order-service:8005
+      - BEHAVIOR_AMOUNT_SCALE=${BEHAVIOR_AMOUNT_SCALE:-1}
+      # Google AI Studio: tạo API key tại https://aistudio.google.com/apikey
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # REST v1beta: gemini-2.5-flash, gemini-flash-latest, ... (tránh 2.0-flash nếu quota 0)
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - GEMINI_MODEL_FALLBACK=${GEMINI_MODEL_FALLBACK:-gemini-flash-latest}
+    volumes:
+      - ./advisory-service/artifacts:/app/artifacts
+      - advisory_chroma:/app/chroma_data
+    depends_on:
+      - customer-service
+      - order-service
+    # Tránh api-gateway proxy /chat khi uvicorn chưa lắng nghe (lần đầu index có thể >60s)
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=5).read()",
+        ]
+      interval: 10s
+      timeout: 8s
+      retries: 15
+      start_period: 180s
+    networks:
+      - micro-network
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  api-gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CUSTOMER_SERVICE_URL=http://customer-service:8001
+      - STAFF_SERVICE_URL=http://staff-service:8002
+      - LAPTOP_SERVICE_URL=http://laptop-service:8003
+      - MOBILE_SERVICE_URL=http://mobile-service:8004
+      - ORDER_SERVICE_URL=http://order-service:8005
+      # Chạy Django gateway trên máy host (không Docker): đặt http://localhost:8010
+      - ADVISORY_SERVICE_URL=${ADVISORY_SERVICE_URL:-http://advisory-service:8010}
+    depends_on:
+      laptop-service:
+        condition: service_started
+      mobile-service:
+        condition: service_started
+      staff-service:
+        condition: service_started
+      customer-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      advisory-service:
+        condition: service_healthy
+    networks:
+      - micro-network
+
+volumes:
+  advisory_chroma:
+
+networks:
+  micro-network:
+    driver: bridge

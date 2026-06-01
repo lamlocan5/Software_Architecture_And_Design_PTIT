@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum AI - E-Commerce Dashboard</title>
+  <meta name="description" content="Hệ thống gợi ý sản phẩm thông minh dựa trên Quantum AI">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a href="index.html" class="brand">
+      <div class="brand-icon">⚡</div>
+      <span class="brand-name">QuantumAI</span>
+    </a>
+
+    <nav class="nav-menu">
+      <div class="nav-item">
+        <a href="index.html" class="nav-link active">
+          <span>🏠</span> Mall
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="chat.html" class="nav-link">
+          <span>🤖</span> AI Assistant
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <span title="Người dùng hiện tại">👤</span>
+        <input type="number" id="globalUserId" value="1" min="1" max="500">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="quantum-hero">
+      <h1 class="hero-title">Discover the <span class="glow-purple">Future</span><br>of Shopping.</h1>
+      <p class="hero-subtitle">
+        Powered by SimpleRNN, Neo4j Knowledge Graph, and Gemini Pro. 
+        Personalized recommendations for 500+ active users.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="btnRecommend" onclick="openRecommendModal()">
+          ✨ Generate Recommendations
+        </button>
+      </div>
+    </header>
+
+    <section class="section-head">
+      <div>
+        <h2 class="section-title">Global Collection</h2>
+        <p id="productCount" style="color: var(--text-muted); font-size: 0.9rem;">Initializing...</p>
+      </div>
+      <div class="badge-ai">LIVE DATA</div>
+    </section>
+
+    <div class="grid-controls">
+      <div class="search-quantum">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Search neural catalog..." oninput="filterProducts()">
+      </div>
+      <div class="filter-chips" id="categoryFilter">
+        <button class="chip active" onclick="filterByCategory('', this)">All</button>
+        <button class="chip" onclick="filterByCategory('Điện thoại', this)">Phones</button>
+        <button class="chip" onclick="filterByCategory('Laptop', this)">Laptops</button>
+        <button class="chip" onclick="filterByCategory('Máy tính bảng', this)">Tablets</button>
+        <button class="chip" onclick="filterByCategory('Tai nghe', this)">Audio</button>
+        <button class="chip" onclick="filterByCategory('Gaming', this)">Gaming</button>
+        <button class="chip" onclick="filterByCategory('Phụ kiện', this)">Gear</button>
+      </div>
+    </div>
+
+    <div class="product-grid" id="productsGrid">
+      <div class="spinner-quantum"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Recommendations -->
+<div class="modal-backdrop" id="recommendModal">
+  <div class="quantum-modal">
+    <div class="modal-header">
+      <h3 class="section-title">✨ AI Neural Analysis</h3>
+      <button class="modal-close" onclick="closeModal('recommendModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 2rem; color: var(--text-muted);">
+        Insights for <span id="recommendUserId" class="glow-purple" style="font-weight: 700;">User 1</span> based on interaction sequence.
+      </div>
+      <div id="recommendResults">
+        <div class="spinner-quantum"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Product Detail -->
+<div class="modal-backdrop" id="productModal">
+  <div class="quantum-modal">
+    <div class="modal-header">
+      <h3 class="section-title" id="productModalTitle">Catalog Insight</h3>
+      <button class="modal-close" onclick="closeModal('productModal')">✕</button>
+    </div>
+    <div class="modal-body" id="productModalBody"></div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastContainer"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

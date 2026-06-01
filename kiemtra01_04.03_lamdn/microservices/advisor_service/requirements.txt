@@ -1,0 +1,8 @@
+django>=4.2,<5.0
+psycopg2-binary>=2.9
+djangorestframework>=3.14
+chromadb==0.5.23
+sentence-transformers>=3.0.0
+google-generativeai>=0.8.0
+requests>=2.31.0
+numpy>=1.24.0

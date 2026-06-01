@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ecom_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: ecom_user
+      MYSQL_PASSWORD: password
+      # We don't set MYSQL_DATABASE here because init.sql will create multiple DBs
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql_init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  neo4j:
+    image: neo4j:5.18.0
+    container_name: ecom_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+      # Allow loading CSV from anywhere
+      NEO4J_dbms_security_allow__csv__import__from__file__urls: "true"
+    ports:
+      - "7474:7474" # Browser
+      - "7687:7687" # Bolt port
+    volumes:
+      - neo4j_data:/data
+    restart: always
+
+volumes:
+  mysql_data:
+  neo4j_data:

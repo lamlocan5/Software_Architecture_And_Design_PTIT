@@ -1,0 +1,25 @@
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.7.4
+
+# Auth
+PyJWT==2.9.0
+
+# Data
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+
+# TensorFlow (CPU-only, Python 3.11 compatible)
+tensorflow-cpu==2.16.2
+
+# LangChain / AI — let pip resolve compatible versions
+langchain-google-genai==2.0.4
+langchain-neo4j>=0.3.0
+
+# Neo4j — unpin to let langchain-neo4j resolve
+neo4j>=5.24.0,<6.0.0
+
+# Env
+python-dotenv==1.0.1

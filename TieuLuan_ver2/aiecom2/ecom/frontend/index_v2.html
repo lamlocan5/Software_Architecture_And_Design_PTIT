@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER_MALL :: NEURAL_PHASE_V2</title>
+  <meta name="description" content="Hệ thống thương mại điện tử tương lai - Phiên bản Cyberpunk Neon">
+  <link rel="stylesheet" href="css/style_v2.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<nav class="cyber-nav">
+  <a href="index_v2.html" class="brand">
+    CYBER<span>MALL</span>
+  </a>
+  
+  <div class="nav-links">
+    <a href="index_v2.html" class="nav-link active">MALL_DFS</a>
+    <a href="chat_v2.html" class="nav-link">AI_ASSIST</a>
+  </div>
+
+  <div class="user-status">
+    <span class="text-cyan font-mono" style="font-size: 0.8rem;">UID::</span>
+    <input type="number" id="globalUserId" value="1" min="1" max="500">
+  </div>
+</nav>
+
+<header class="hero-grid">
+  <div class="bento-item bento-main">
+    <h1 class="glitch-text" data-text="NEURAL SHOPPING">NEURAL SHOPPING</h1>
+    <p class="hero-sub">
+      Augmented intelligence recommendation engine. Version 2.0.0-Beta. 
+      Accessing global product nodes via encrypted neural links.
+    </p>
+    <div style="display:flex; gap:15px">
+      <button class="cyber-btn" id="btnRecommend" onclick="openRecommendModal()">
+        [ GENERATE_REC ]
+      </button>
+      <button class="cyber-btn btn-secondary" onclick="document.getElementById('productsGrid').scrollIntoView({behavior:'smooth'})">
+        [ BROWSE_CATALOG ]
+      </button>
+    </div>
+  </div>
+  
+  <div class="bento-item">
+    <div class="text-cyan font-mono" style="font-size: 0.8rem; margin-bottom: 10px">SYSTEM_STATS</div>
+    <div id="productCount" class="font-mono" style="font-size: 1.2rem; font-weight: 800; color: #fff;">LINKING...</div>
+    <div class="text-muted font-mono" style="font-size: 0.7rem; margin-top: 10px;">LATENCY: 14ms</div>
+  </div>
+  
+  <div class="bento-item">
+    <div class="text-pink font-mono" style="font-size: 0.8rem; margin-bottom: 5px">BACKEND_LINK</div>
+    <div class="text-cyan font-mono" style="font-size: 1.1rem;">API_STABLE</div>
+    <div style="margin-top: 15px; height: 3px; background: rgba(0, 243, 255, 0.1);">
+      <div style="width: 85%; height: 100%; background: var(--primary); box-shadow: 0 0 10px var(--primary)"></div>
+    </div>
+  </div>
+</header>
+
+<section class="cyber-controls">
+  <div class="search-wrapper">
+    <i class="fas fa-terminal"></i>
+    <input type="text" id="searchInput" placeholder="EXECUTE_SEARCH_CMD..." oninput="filterProducts()">
+  </div>
+  
+  <div class="filter-group" id="categoryFilter">
+    <button class="cyber-btn active" onclick="filterByCategory('', this)">ALL</button>
+    <button class="cyber-btn" onclick="filterByCategory('Điện thoại', this)">PHONES</button>
+    <button class="cyber-btn" onclick="filterByCategory('Laptop', this)">LAPTOPS</button>
+    <button class="cyber-btn" onclick="filterByCategory('Máy tính bảng', this)">TABLETS</button>
+    <button class="cyber-btn" onclick="filterByCategory('Tai nghe', this)">AUDIO</button>
+    <button class="cyber-btn" onclick="filterByCategory('Gaming', this)">GAMING</button>
+  </div>
+</section>
+
+<main class="product-grid" id="productsGrid">
+  <!-- Dynamic Injection -->
+</main>
+
+<!-- Modal: Recommendations -->
+<div class="modal-overlay" id="recommendModal">
+  <div class="cyber-modal">
+    <button class="modal-close" onclick="closeModal('recommendModal')">✕</button>
+    <h2 class="text-cyan font-mono" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+      [ NEURAL_INFERENCE_ENGINE ]
+    </h2>
+    <p class="text-muted font-mono" id="recommendUserId" style="margin-bottom: 2rem; font-size: 0.9rem;">LOADING_USER_DATA...</p>
+    <div id="recommendResults">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Product Detail -->
+<div class="modal-overlay" id="productModal">
+  <div class="cyber-modal" style="max-width: 900px;">
+    <button class="modal-close" onclick="closeModal('productModal')">✕</button>
+    <div id="productModalBody">
+      <!-- Dynamic Injection -->
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="js/main_v2.js"></script>
+</body>
+</html>
