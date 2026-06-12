@@ -1,15 +1,111 @@
 openapi: 3.0.3
 info:
-  title: Recommender AI Service API
+  title: AI Service API
   version: 1.0.0
   description: |
-    Service gợi ý sách dùng Gemini. Gateway gửi danh sách sách, service trả về danh sách ID được gợi ý.
+    Dịch vụ AI cung cấp các tính năng gợi ý sản phẩm thông minh (Hybrid: LSTM + Neo4j + Content similarity) và trợ lý ảo (Chatbot) tư vấn bán hàng tự động sử dụng RAG kết hợp FAISS và Gemini 3.5 Flash.
 servers:
-  - url: http://recommender-ai-service:8000
+  - url: http://ai-service:8000
 paths:
+  /recommend/:
+    get:
+      summary: Lấy gợi ý sản phẩm Hybrid (LSTM + Neo4j + Content Similarity)
+      tags: [Recommendations]
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: ID của khách hàng
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4
+          description: Số lượng sản phẩm muốn gợi ý
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                  recommended_ids:
+                    type: array
+                    items:
+                      type: integer
+                  source:
+                    type: string
+                    example: hybrid
+
+  /behavior/:
+    post:
+      summary: Ghi nhận hành vi tương tác của người dùng
+      tags: [Behavior]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                product_id:
+                  type: integer
+                behavior_type:
+                  type: string
+                  enum: [view, cart, buy]
+              required: [user_id, product_id, behavior_type]
+      responses:
+        '200':
+          description: Ghi nhận thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: User interaction logged successfully
+
+  /chatbot/:
+    post:
+      summary: Chatbot RAG tư vấn bán hàng thông minh
+      tags: [Chatbot]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: Câu hỏi từ khách hàng (ví dụ tư vấn sản phẩm)
+              required: [query]
+      responses:
+        '200':
+          description: Câu trả lời tư vấn sinh bởi RAG + Gemini 3.5 Flash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+
   /recommendations/:
     post:
-      summary: Sinh danh sách gợi ý sách
+      summary: Sinh danh sách gợi ý sản phẩm (Legacy - Tương thích ngược)
       tags: [Recommendations]
       requestBody:
         required: true
@@ -19,19 +115,15 @@ paths:
               type: object
               properties:
                 books:
-                  description: Danh sách sách (lấy từ catalogue-service) để model chọn ra subset.
+                  description: Danh sách sản phẩm đầu vào
                   type: array
                   items:
                     type: object
                     properties:
                       id: { type: integer }
-                      title: { type: string }
-                      author: { type: string }
+                      name: { type: string }
                       price: { type: number, format: float }
                       stock: { type: integer }
-                      publisher: { type: string, nullable: true }
-                      avg_rating: { type: number }
-                      total_reviews: { type: integer }
                 limit:
                   type: integer
                   default: 6
@@ -55,4 +147,3 @@ paths:
                   source:
                     type: string
                     enum: [gemini, fallback]
-

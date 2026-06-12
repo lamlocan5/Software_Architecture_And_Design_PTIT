@@ -1,6 +1,6 @@
-PIPELINE + SEQUENCE DIAGRAM — CART SERVICE (bookstore-microservice)
+PIPELINE & SEQUENCE DIAGRAM — CART SERVICE (bookstore-microservice)
 
-Generated: 2026-03-17
+Generated: 2026-06-12
 
 ================================================================
 1) PIPELINE (các bước triển khai / chạy cart-service)
@@ -8,7 +8,7 @@ Generated: 2026-03-17
 
 Mục tiêu:
 - Build và chạy riêng `cart-service` hoặc chạy cùng toàn bộ hệ thống bằng Docker Compose.
-- `cart-service` cung cấp API giỏ hàng và gọi sang `book-service` để kiểm tra tồn tại book khi thêm vào giỏ.
+- `cart-service` cung cấp API giỏ hàng và sử dụng cơ chế lắng nghe sự kiện bất đồng bộ qua Redis để tự động khởi tạo giỏ hàng cho khách hàng mới.
 
 ---------------------------------------------------------------
 1.1. Vị trí cấu hình trong dự án
@@ -20,23 +20,27 @@ Mục tiêu:
     - `cart-service`
       - build: `./cart-service`
       - ports: `8003:8000`
-      - volumes: `./data/cart:/app/data`
+      - environment:
+        - DB_HOST=host.docker.internal
+        - DB_PORT=5432
+        - DB_USER=postgres
+        - DB_PASSWORD=1234
+        - DB_NAME=bookstore_cart
+        - REDIS_HOST=redis
+      - depends_on:
+        - redis
 
 Ý nghĩa:
 - Container lắng nghe port 8000, máy host map ra 8003.
-- DB sqlite (và data) nằm trong `/app/data` (persist nhờ volume `./data/cart`).
+- Dữ liệu được lưu trữ trong database PostgreSQL `bookstore_cart`.
+- Kết nối tới Redis container để lắng nghe/gửi thông điệp Pub/Sub.
 
 ---------------------------------------------------------------
 1.2. Pipeline build/run (Docker)
 ---------------------------------------------------------------
 
-A) Chạy riêng cart-service
-
-  docker-compose up --build cart-service
-
-B) Chạy toàn bộ hệ thống (khuyến nghị khi demo UI)
-
-  docker-compose up --build
+Chạy toàn bộ hệ thống (khuyến nghị để có Redis Message Broker):
+  docker compose up --build -d
 
 ---------------------------------------------------------------
 1.3. Startup pipeline bên trong container (Dockerfile CMD)
@@ -44,16 +48,12 @@ B) Chạy toàn bộ hệ thống (khuyến nghị khi demo UI)
 
 - Path: `cart-service/Dockerfile`
 - CMD đang chạy chuỗi lệnh:
-
-  mkdir -p data
-  python manage.py makemigrations app
-  python manage.py migrate
-  python manage.py runserver 0.0.0.0:8000
+  mkdir -p data && python manage.py makemigrations app && python manage.py migrate && python manage.py runserver 0.0.0.0:8000
 
 Ý nghĩa:
-- Tạo thư mục `data` để chứa SQLite DB.
-- Tạo migrations cho app `app`, migrate DB.
-- Chạy Django dev server trên 0.0.0.0 để container nhận request từ ngoài.
+- Tạo migrations cho app `app` và migrate database PostgreSQL.
+- Chạy Django server trên 0.0.0.0:8000.
+- `apps.py` tự động khởi chạy một daemon thread `start_consumer(handlers)` để subscribe kênh Redis.
 
 ---------------------------------------------------------------
 1.4. API endpoints của cart-service
@@ -62,16 +62,12 @@ B) Chạy toàn bộ hệ thống (khuyến nghị khi demo UI)
 - Path: `cart-service/cart_service/urls.py`
 - Các endpoint:
   - POST  `/carts/`                  -> tạo cart
-  - POST  `/carts/add-item/`         -> thêm item vào cart
+  - POST  `/carts/add-item/`         -> thêm item vào cart (kiểm tra book qua product-service)
   - GET   `/carts/<customer_id>/`    -> xem item trong cart theo customer_id
   - GET   `/carts/customer/<customer_id>/` -> lấy thông tin cart (bao gồm cart id) theo customer_id
 
-Khi chạy bằng docker-compose:
-- Từ host gọi: `http://localhost:8003/...`
-- Từ nội bộ docker network, service khác gọi: `http://cart-service:8000/...`
-
 ---------------------------------------------------------------
-1.5. Model dữ liệu (ở mức service)
+1.5. Model dữ liệu
 ---------------------------------------------------------------
 
 - Path: `cart-service/app/models.py`
@@ -79,159 +75,67 @@ Khi chạy bằng docker-compose:
   - Cart(customer_id)
   - CartItem(cart FK -> Cart, book_id, quantity)
 
-Ghi chú:
-- `book_id` và `customer_id` là integer “tham chiếu” sang context khác (book-service, customer-service).
-
 ================================================================
-2) SEQUENCE DIAGRAM — QUÁ TRÌNH TẠO CART
+2) SEQUENCE DIAGRAM — QUÁ TRÌNH TẠO CART BẤT ĐỒNG BỘ
 ================================================================
 
-Trong dự án của bạn có 2 luồng tạo cart quan trọng:
-
-Luồng A) Auto-create cart khi tạo customer (đúng theo code hiện tại)
-Luồng B) Tạo cart trực tiếp bằng cách gọi cart-service `/carts/`
-
----------------------------------------------------------------
-2.1. Luồng A — Tạo Customer -> tự động tạo Cart
----------------------------------------------------------------
-
-Code nguồn liên quan:
-- `customer-service/app/views.py`
-  - Class: `CustomerListCreate`
-  - Method: `post()`
-  - Gọi:
-    - `POST http://cart-service:8000/carts/` với JSON `{ "customer_id": customer.id }`
-
-- `cart-service/app/views.py`
-  - Class: `CartCreate`
-  - Method: `post()`
-  - Tạo bản ghi Cart bằng `CartSerializer(...).save()`
-
-Sequence Diagram (Mermaid):
-
-sequenceDiagram
-  autonumber
-  actor Client as Client / api-gateway / tester
-  participant Customer as customer-service
-  participant Cart as cart-service
-  participant DbC as customer DB (sqlite)
-  participant DbCart as cart DB (sqlite)
-
-  Client->>Customer: POST /customers/ (name, email)
-  Customer->>DbC: INSERT Customer
-  DbC-->>Customer: customer{id}
-  Customer->>Cart: POST /carts/ {customer_id}
-  Cart->>DbCart: INSERT Cart(customer_id)
-  DbCart-->>Cart: cart{id, customer_id}
-  Cart-->>Customer: 200 {cart...}
-  Customer-->>Client: 200 {customer...}
-
-Lưu ý thiết kế:
-- customer-service hiện **không kiểm tra** response tạo cart (không retry, không rollback).
-- Nếu cart-service lỗi, customer vẫn được tạo → có thể dẫn đến customer không có cart.
-
----------------------------------------------------------------
-2.2. Luồng B — Tạo cart trực tiếp bằng cart-service
----------------------------------------------------------------
-
-Code nguồn liên quan:
-- `cart-service/cart_service/urls.py`: `POST /carts/`
-- `cart-service/app/views.py`: `CartCreate.post()`
-
-Sequence Diagram (Mermaid):
-
-sequenceDiagram
-  autonumber
-  actor Client as Client / api-gateway / tester
-  participant Cart as cart-service
-  participant DbCart as cart DB (sqlite)
-
-  Client->>Cart: POST /carts/ {customer_id}
-  Cart->>DbCart: INSERT Cart(customer_id)
-  DbCart-->>Cart: cart{id, customer_id}
-  Cart-->>Client: 200 {cart...}
-
----------------------------------------------------------------
-2.3. (Liên quan) Thêm item vào cart có check book-service
----------------------------------------------------------------
-
-Code nguồn liên quan:
-- `cart-service/app/views.py`: `AddCartItem.post()`
-  - Gọi `GET http://book-service:8000/books/`
-  - Check `book_id` có tồn tại không
-  - Nếu hợp lệ -> tạo CartItem
-
-Sequence Diagram (Mermaid):
-
-sequenceDiagram
-  autonumber
-  actor Client as Client / api-gateway
-  participant Cart as cart-service
-  participant Book as book-service
-  participant DbCart as cart DB (sqlite)
-
-  Client->>Cart: POST /carts/add-item/ {cart, book_id, quantity}
-  Cart->>Book: GET /books/
-  Book-->>Cart: 200 [books...]
-  alt book_id not found
-    Cart-->>Client: 200 {error: \"Book not found\"}
-  else book_id exists
-    Cart->>DbCart: INSERT CartItem(cart, book_id, quantity)
-    DbCart-->>Cart: cart_item{id...}
-    Cart-->>Client: 200 {cart_item...}
-  end
-
-END
-
-================================================================
-3) SEQUENCE DIAGRAM (MERMAID) DÙNG CHO TOOL VẼ
-================================================================
-
-Bạn có thể copy block dưới đây vào file .md hoặc tool như mermaid.live để render hình:
+Khi một khách hàng đăng ký thành công qua `user-service`, quá trình tạo giỏ hàng sẽ diễn ra bất đồng bộ thông qua Redis Broker để giảm thiểu coupling chéo.
 
 ```mermaid
 sequenceDiagram
   autonumber
-  actor User as User (qua API Gateway)
-  participant Gateway as api-gateway
-  participant CustomerSvc as customer-service
+  actor User as User (Browser)
+  participant UI as frontend (UI)
+  participant UserSvc as user-service
+  participant Redis as Redis Broker
   participant CartSvc as cart-service
-  participant BookSvc as book-service
-  participant DbCustomer as DB Customer
-  participant DbCart as DB Cart
+  participant DbUser as DB User (MySQL)
+  participant DbCart as DB Cart (PostgreSQL)
 
-  rect rgb(230,230,255)
-    Note over User,CustomerSvc: Bước 1 - Tạo Customer -> auto tạo Cart
+  User->>UI: Đăng ký tài khoản (form /register/)
+  UI->>UserSvc: POST /customers/ {name, email, password}
+  UserSvc->>DbUser: INSERT Customer
+  DbUser-->>UserSvc: Customer ID
+  UserSvc->>Redis: Publish event "customer_created" {customer_id}
+  Note over UserSvc,Redis: Sự kiện phát đi bất đồng bộ
+  UserSvc-->>UI: 201 Created (Tạo tài khoản thành công)
+  UI-->>User: Đăng nhập & chuyển hướng về Home
 
-    User->>Gateway: Đăng ký khách hàng (form /register hoặc POST /customers/)
-    Gateway->>CustomerSvc: POST /customers/ {name, email, ...}
-    CustomerSvc->>DbCustomer: INSERT Customer
-    DbCustomer-->>CustomerSvc: customer{id}
-    CustomerSvc->>CartSvc: POST /carts/ {customer_id: customer.id}
-    CartSvc->>DbCart: INSERT Cart(customer_id)
-    DbCart-->>CartSvc: cart{id, customer_id}
-    CartSvc-->>CustomerSvc: 200 {cart...}
-    CustomerSvc-->>Gateway: 200 {customer...}
-    Gateway-->>User: Hiển thị khách hàng mới (đồng thời đã có cart rỗng)
-  end
-
-  rect rgb(230,255,230)
-    Note over User,CartSvc: Bước 2 - Thêm sách vào giỏ
-
-    User->>Gateway: Thêm vào giỏ hàng (nút trên trang chi tiết sách)
-    Gateway->>CartSvc: POST /carts/add-item/ {cart, book_id, quantity}
-    CartSvc->>BookSvc: GET /books/
-    BookSvc-->>CartSvc: 200 [danh sách books]
-    alt book_id không tồn tại
-      CartSvc-->>Gateway: 200 {error: "Book not found"}
-      Gateway-->>User: Thông báo lỗi "Book not found"
-    else book_id hợp lệ
-      CartSvc->>DbCart: INSERT CartItem(cart, book_id, quantity)
-      DbCart-->>CartSvc: cart_item{id,...}
-      CartSvc-->>Gateway: 200 {cart_item...}
-      Gateway-->>User: Giỏ hàng hiển thị item mới
-    end
-  end
+  %% Async consume
+  Redis-.->>CartSvc: Consumer nhận event "customer_created"
+  CartSvc->>DbCart: SELECT/INSERT Cart WHERE customer_id=customer_id
+  DbCart-->>CartSvc: Cart Created
+  Note over CartSvc,DbCart: Giỏ hàng được tạo tự động dưới nền
 ```
 
+================================================================
+3) SEQUENCE DIAGRAM — THÊM ITEM VÀO CART (CHECK PRODUCT-SERVICE)
+================================================================
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as User (Browser)
+  participant UI as frontend (UI)
+  participant BFF as api-gateway (BFF)
+  participant CartSvc as cart-service
+  participant ProdSvc as product-service
+  participant DbCart as DB Cart
+
+  User->>UI: Click "Thêm vào giỏ"
+  UI->>BFF: POST /api/gateway/cart/add-item/
+  BFF->>CartSvc: POST /carts/add-item/ {cart_id, book_id, quantity}
+  CartSvc->>ProdSvc: GET /products/
+  ProdSvc-->>CartSvc: 200 [products list]
+  alt book_id not found in products list
+    CartSvc-->>BFF: 200 {error: "Book not found"}
+    BFF-->>UI: Response error
+    UI-->>User: Hiển thị lỗi "Sản phẩm không hợp lệ"
+  else book_id is valid
+    CartSvc->>DbCart: INSERT CartItem(cart, book_id, quantity)
+    DbCart-->>CartSvc: CartItem
+    CartSvc-->>BFF: 200 {cart_item}
+    BFF-->>UI: 200 Success
+    UI-->>User: Cập nhật giỏ hàng thành công
+  end
+```

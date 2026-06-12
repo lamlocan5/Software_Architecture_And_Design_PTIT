@@ -40,7 +40,7 @@ async function appointments() {
   }
 }
 
-function showCreateAppt() {
+async function showCreateAppt() {
   openModal('📅 Tạo lịch hẹn', `
     <form onsubmit="createAppt(event)">
       <div class="form-row">
@@ -50,7 +50,9 @@ function showCreateAppt() {
         </div>
         <div class="form-group">
           <label class="form-label">Bác sĩ *</label>
-          <input id="a_doc" class="form-control" required placeholder="BS. Nguyễn Văn B" />
+          <select id="a_doc_id" class="form-control" required>
+            <option value="">Đang tải danh sách bác sĩ...</option>
+          </select>
         </div>
       </div>
       <div class="form-group">
@@ -66,6 +68,20 @@ function showCreateAppt() {
         <button type="submit" class="btn btn-primary">💾 Lưu</button>
       </div>
     </form>`);
+
+  try {
+    const docs = await DoctorAPI.list();
+    const list = docs?.results ?? docs ?? [];
+    const select = document.getElementById('a_doc_id');
+    if (!list.length) {
+      select.innerHTML = '<option value="">Không có bác sĩ nào</option>';
+    } else {
+      select.innerHTML = '<option value="">-- Chọn bác sĩ --</option>' +
+        list.map(d => `<option value="${d.id}">${d.full_name} (${d.specialty})</option>`).join('');
+    }
+  } catch (err) {
+    document.getElementById('a_doc_id').innerHTML = '<option value="">Lỗi tải danh sách bác sĩ</option>';
+  }
 }
 
 async function createAppt(e) {
@@ -73,7 +89,7 @@ async function createAppt(e) {
   try {
     await ClinicalAPI.createAppointment({
       patient_id: parseInt(document.getElementById('a_pid').value),
-      doctor_name: document.getElementById('a_doc').value,
+      doctor_id: parseInt(document.getElementById('a_doc_id').value),
       scheduled_at: document.getElementById('a_time').value,
       notes: document.getElementById('a_note').value || null,
     });

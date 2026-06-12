@@ -1,6 +1,6 @@
-PIPELINE + SEQUENCE DIAGRAM — CART-SERVICE & PAY-SERVICE (bookstore-microservice)
+PIPELINE & SEQUENCE DIAGRAM — CART-SERVICE & PAYMENT-SERVICE (bookstore-microservice)
 
-Generated: 2026-03-17
+Generated: 2026-06-12
 
 ================================================================
 1) PIPELINE CART-SERVICE
@@ -9,303 +9,126 @@ Generated: 2026-03-17
 1.1. Cấu hình Docker Compose
 -----------------------------
 
-- File: docker-compose.yml
+- File: `docker-compose.yml`
 - Service:
 
   cart-service:
     build: ./cart-service
     ports:
       - "8003:8000"
-    volumes:
-      - ./data/cart:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+      - DB_NAME=bookstore_cart
+      - REDIS_HOST=redis
 
 Ý nghĩa:
-- Image được build từ thư mục `cart-service/`.
-- Port container 8000 map ra host 8003.
-- DB SQLite nằm trong `/app/data` được bind ra `./data/cart`.
+- Image được build từ thư mục `./cart-service/`.
+- Sử dụng PostgreSQL database `bookstore_cart` ở chế độ Docker.
+- Khởi chạy Redis background consumer thread để lắng nghe sự kiện từ `user-service`.
 
-1.2. Dockerfile & lệnh khởi động
---------------------------------
-
-- File: cart-service/Dockerfile
-- CMD:
-
-  mkdir -p data && \
-  python manage.py makemigrations app && \
-  python manage.py migrate && \
-  python manage.py runserver 0.0.0.0:8000
-
-Pipeline khởi động:
-- Tạo thư mục data.
-- Tạo và áp dụng migrations cho app `app`.
-- Chạy Django dev server lắng nghe 0.0.0.0:8000 (để container nhận request).
-
-1.3. API chính của cart-service
+1.2. API chính của cart-service
 -------------------------------
 
-- File: cart-service/cart_service/urls.py
-
-  - POST  /carts/                          -> CartCreate (tạo Cart cho 1 customer)
-  - POST  /carts/add-item/                 -> AddCartItem (thêm 1 CartItem, có gọi book-service để check)
-  - GET   /carts/<customer_id>/            -> ViewCart (trả về danh sách CartItem theo customer_id)
-  - GET   /carts/customer/<customer_id>/   -> CartByCustomer (trả về Cart object, bao gồm cart.id)
-
-1.4. Model chính
-----------------
-
-- File: cart-service/app/models.py
-
-  - Cart(customer_id)
-  - CartItem(cart FK -> Cart, book_id, quantity)
+- Path: `cart-service/cart_service/urls.py`
+  - POST  `/carts/`                          -> tạo Cart
+  - POST  `/carts/add-item/`                 -> thêm item vào giỏ hàng (check book qua product-service)
+  - GET   `/carts/<customer_id>/`            -> xem chi tiết giỏ hàng theo customer_id
+  - GET   `/carts/customer/<customer_id>/`   -> lấy thông tin cart object
 
 ================================================================
-2) PIPELINE PAY-SERVICE (payment-service)
+2) PIPELINE PAYMENT-SERVICE
 ================================================================
 
 2.1. Cấu hình Docker Compose
 ----------------------------
 
-- File: docker-compose.yml
+- File: `docker-compose.yml`
 - Service:
 
-  pay-service:
-    build: ./pay-service
+  payment-service:
+    build: ./payment-service
     ports:
       - "8007:8000"
-    volumes:
-      - ./data/pay:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+      - DB_NAME=bookstore_payment
+      - REDIS_HOST=redis
 
 Ý nghĩa:
-- Image build từ `pay-service/`.
-- Container port 8000 map ra host 8007.
-- Dữ liệu SQLite lưu tại `./data/pay`.
+- Image build từ `./payment-service/`.
+- Dữ liệu giao dịch được lưu trữ trong database PostgreSQL `bookstore_payment`.
+- Tích hợp Redis Event Broker để phát đi thông điệp thanh toán hoàn tất.
 
-2.2. Dockerfile & lệnh khởi động
---------------------------------
-
-- File: pay-service/Dockerfile
-- CMD:
-
-  mkdir -p data && \
-  find app/migrations -name '*.py' ! -name '__init__.py' -delete && \
-  python manage.py makemigrations app && \
-  python manage.py migrate && \
-  python manage.py runserver 0.0.0.0:8000
-
-Khác biệt:
-- Trước khi migrate, xóa các file migration cũ (trừ __init__.py) để protect khỏi migration cũ/không dùng.
-
-2.3. API chính của pay-service
-------------------------------
-
-- File: pay-service/pay_service/urls.py
-
-  - GET   /payments/                       -> PaymentList (danh sách tất cả payment)
-  - POST  /payments/create/                -> PaymentCreate (tạo payment mới)
-  - GET   /payments/<payment_id>/          -> PaymentDetail (chi tiết 1 payment)
-  - PATCH /payments/<payment_id>/status/   -> PaymentStatusUpdate (đổi trạng thái)
-  - GET   /payments/order/<order_id>/      -> OrderPayments (payments theo order)
-  - GET   /payments/customer/<customer_id>/-> CustomerPayments (payments theo customer)
-
-2.4. Model chính
-----------------
-
-- File: pay-service/app/models.py
-
-  Payment:
-    - order_id      (int)  — tham chiếu order-service
-    - customer_id   (int)  — tham chiếu customer-service
-    - amount        (Decimal)
-    - method        (cod/bank/card/wallet)
-    - provider      (tên ngân hàng, ví,…)
-    - transaction_id
-    - status        (initiated/paid/failed/refunded/cancelled)
-    - created_at, updated_at
-
-Logic tạo payment:
-- File: pay-service/app/views.py → PaymentCreate.post():
-  - Validate bắt buộc: order_id, customer_id, amount.
-  - Tạo Payment với status mặc định `initiated`, method default `cod`.
-
-================================================================
-3) SEQUENCE DIAGRAM — CART-SERVICE
-================================================================
-
-3.1. Tạo customer -> auto tạo cart
+2.2. API chính của payment-service
 ----------------------------------
 
-Code liên quan:
-- File: customer-service/app/views.py
-
-  - CustomerListCreate.post():
-    - Lưu Customer.
-    - Gọi POST http://cart-service:8000/carts/ {customer_id: customer.id}
-
-- File: cart-service/app/views.py
-  - CartCreate.post():
-    - Nhận JSON, validate qua CartSerializer, lưu Cart.
-
-Mermaid sequenceDiagram:
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor User as User (qua API Gateway)
-  participant Gateway as api-gateway
-  participant CustomerSvc as customer-service
-  participant CartSvc as cart-service
-  participant DbCustomer as DB Customer
-  participant DbCart as DB Cart
-
-  User->>Gateway: Đăng ký khách hàng (form /register hoặc POST /customers/)
-  Gateway->>CustomerSvc: POST /customers/ {name, email, ...}
-  CustomerSvc->>DbCustomer: INSERT Customer
-  DbCustomer-->>CustomerSvc: customer{id}
-  CustomerSvc->>CartSvc: POST /carts/ {customer_id: customer.id}
-  CartSvc->>DbCart: INSERT Cart(customer_id)
-  DbCart-->>CartSvc: cart{id, customer_id}
-  CartSvc-->>CustomerSvc: 200 {cart...}
-  CustomerSvc-->>Gateway: 200 {customer...}
-  Gateway-->>User: Hiển thị khách hàng mới (đã có cart rỗng)
-```
-
-3.2. Thêm item vào cart (gọi sang book-service để check)
--------------------------------------------------------
-
-Code liên quan:
-- File: cart-service/app/views.py → AddCartItem.post():
-  - Lấy `book_id` từ request.
-  - Gọi `GET http://book-service:8000/books/`.
-  - Nếu không tìm thấy `book_id` → trả `{error: "Book not found"}`.
-  - Nếu hợp lệ → lưu CartItem.
-
-Mermaid:
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor User as User (qua Gateway)
-  participant Gateway as api-gateway
-  participant CartSvc as cart-service
-  participant BookSvc as book-service
-  participant DbCart as DB Cart
-
-  User->>Gateway: Thêm vào giỏ (nút trên trang sách)
-  Gateway->>CartSvc: POST /carts/add-item/ {cart, book_id, quantity}
-  CartSvc->>BookSvc: GET /books/
-  BookSvc-->>CartSvc: 200 [books...]
-  alt book_id không tồn tại
-    CartSvc-->>Gateway: 200 {error: "Book not found"}
-    Gateway-->>User: Thông báo lỗi "Book not found"
-  else book_id hợp lệ
-    CartSvc->>DbCart: INSERT CartItem(cart, book_id, quantity)
-    DbCart-->>CartSvc: cart_item{id,...}
-    CartSvc-->>Gateway: 200 {cart_item...}
-    Gateway-->>User: Giỏ hàng hiển thị item mới
-  end
-```
+- Path: `payment-service/pay_service/urls.py`
+  - GET   `/payments/`                       -> xem toàn bộ danh sách thanh toán
+  - POST  `/payments/create/`                -> tạo giao dịch thanh toán
+  - GET   `/payments/<payment_id>/`          -> chi tiết một payment
+  - PATCH `/payments/<payment_id>/status/`   -> cập nhật trạng thái thanh toán (phát event payment_processed)
+  - GET   `/payments/order/<order_id>/`      -> payments theo mã đơn hàng
+  - GET   `/payments/customer/<customer_id>/`-> payments theo mã khách hàng
 
 ================================================================
-4) SEQUENCE DIAGRAM — PAY-SERVICE (PAYMENT FLOW)
+3) LUỒNG SEQUENCE DIAGRAM CHÍNH
 ================================================================
 
-Giả định luồng: Sau khi khách hàng checkout đơn hàng trên gateway:
-- order-service đã tạo Order.
-- pay-service được gọi để tạo Payment cho Order đó.
-- Sau đó có thể update trạng thái payment (paid/failed/...) tùy vào kết quả thực tế.
-
-4.1. Tạo Payment cho một Order
-------------------------------
-
-Code liên quan:
-- File: pay-service/app/views.py → PaymentCreate.post()
-  - Check bắt buộc: order_id, customer_id, amount.
-  - Tạo Payment với status = initiated.
-
-Mermaid:
+3.1. Đăng ký khách hàng -> Tự động khởi tạo giỏ hàng trống (Redis Pub/Sub)
+--------------------------------------------------------------------------
 
 ```mermaid
 sequenceDiagram
   autonumber
-  actor User as User (qua Gateway)
-  participant Gateway as api-gateway
+  actor User as Khách hàng
+  participant UI as frontend (UI)
+  participant UserSvc as user-service
+  participant Redis as Redis Broker
+  participant CartSvc as cart-service
+  participant DbCart as DB Cart (PostgreSQL)
+
+  User->>UI: Thực hiện Đăng ký tài khoản
+  UI->>UserSvc: POST /customers/ {name, email, password}
+  UserSvc->>UserSvc: Tạo tài khoản & lưu vào MySQL
+  UserSvc->>Redis: Publish event "customer_created" {customer_id, email, name}
+  UserSvc-->>UI: 201 Created (Tài khoản hoạt động)
+  UI-->>User: Đăng nhập thành công
+
+  %% Background process
+  Redis-.->>CartSvc: Consumer nhận event "customer_created"
+  CartSvc->>DbCart: Khởi tạo giỏ hàng mới cho customer_id
+```
+
+3.2. Cập nhật trạng thái thanh toán -> Tự động xác nhận đơn hàng (Redis Pub/Sub)
+--------------------------------------------------------------------------------
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Admin as Admin / Staff
+  participant UI as frontend (Admin UI)
+  participant PaySvc as payment-service
+  participant Redis as Redis Broker
   participant OrderSvc as order-service
-  participant PaySvc as pay-service
-  participant DbOrder as DB Order
-  participant DbPay as DB Payment
+  participant NotiSvc as notification-service
+  participant DbOrder as DB Order (PostgreSQL)
 
-  User->>Gateway: Checkout đơn hàng (từ giỏ hàng)
-  Gateway->>OrderSvc: POST /orders/create/ {customer_id, items,...}
-  OrderSvc->>DbOrder: INSERT Order + OrderItems
-  DbOrder-->>OrderSvc: order{id, total_amount,...}
-  OrderSvc-->>Gateway: 200 {order...}
+  Admin->>UI: Đánh dấu hóa đơn đã thanh toán ("paid")
+  UI->>PaySvc: PATCH /payments/<id>/status/ {status: "paid"}
+  PaySvc->>PaySvc: Lưu trạng thái "paid" vào PostgreSQL
+  PaySvc->>Redis: Publish event "payment_processed" {order_id, customer_id, amount, status: "paid"}
+  PaySvc-->>UI: 200 OK (Thanh toán hoàn tất)
 
-  Gateway->>PaySvc: POST /payments/create/ {order_id, customer_id, amount, method}
-  PaySvc->>DbPay: INSERT Payment(order_id, customer_id, amount, method, status=initiated)
-  DbPay-->>PaySvc: payment{id, status=initiated}
-  PaySvc-->>Gateway: 201 {payment...}
-  Gateway-->>User: Hiển thị thông tin thanh toán (status=initiated)
+  %% Consumers
+  Redis-.->>OrderSvc: Consumer nhận event "payment_processed"
+  OrderSvc->>DbOrder: UPDATE Order WHERE id=order_id SET status="confirmed"
+  
+  Redis-.->>NotiSvc: Consumer nhận event "payment_processed"
+  NotiSvc->>NotiSvc: Tạo nhật ký thông báo thanh toán thành công cho khách hàng
 ```
-
-4.2. Cập nhật trạng thái Payment (paid/failed/refunded/cancelled)
------------------------------------------------------------------
-
-Code liên quan:
-- File: pay-service/app/views.py → PaymentStatusUpdate.patch()
-  - Lấy Payment theo payment_id.
-  - Validate `status` thuộc VALID_STATUSES = ['initiated','paid','failed','refunded','cancelled'].
-  - Ghi lại payment.status mới và trả về.
-
-Mermaid:
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Admin as Admin/Job (Gateway hoặc service khác)
-  participant Gateway as api-gateway
-  participant PaySvc as pay-service
-  participant DbPay as DB Payment
-
-  Admin->>Gateway: Chọn "Đánh dấu đã thanh toán" cho payment
-  Gateway->>PaySvc: PATCH /payments/<id>/status/ {status: "paid"}
-  PaySvc->>DbPay: SELECT Payment WHERE id=<id>
-  DbPay-->>PaySvc: Payment hiện tại
-  alt status không hợp lệ
-    PaySvc-->>Gateway: 400 {"error": "Trạng thái không hợp lệ..."}
-    Gateway-->>Admin: Thông báo lỗi
-  else status hợp lệ
-    PaySvc->>DbPay: UPDATE Payment.status = "paid"
-    DbPay-->>PaySvc: Payment đã cập nhật
-    PaySvc-->>Gateway: 200 {payment (status=paid)}
-    Gateway-->>Admin: Hiển thị trạng thái payment mới
-  end
-```
-
-4.3. Xem lịch sử Payment theo Order / Customer
-----------------------------------------------
-
-Code liên quan:
-- File: pay-service/app/views.py
-  - OrderPayments.get(order_id)
-  - CustomerPayments.get(customer_id)
-
-Mermaid (tổng quát):
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor User as Admin/User
-  participant Gateway as api-gateway
-  participant PaySvc as pay-service
-  participant DbPay as DB Payment
-
-  User->>Gateway: Xem lịch sử thanh toán của đơn hàng
-  Gateway->>PaySvc: GET /payments/order/<order_id>/
-  PaySvc->>DbPay: SELECT Payment WHERE order_id=<order_id>
-  DbPay-->>PaySvc: [list payments]
-  PaySvc-->>Gateway: 200 [payments...]
-  Gateway-->>User: Hiển thị danh sách payment
-```
-
-END
-

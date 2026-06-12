@@ -33,16 +33,20 @@ services:
     build: ./catalogue-service
     ports:
       - "8008:8000"
-    volumes:
-      - ./data/catalogue:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_catalogue
 ```
 
 - **`build: ./catalogue-service`**: Docker build image cho service này từ thư mục `catalogue-service`.
 - **`ports: "8008:8000"`**:
   - Port `8000` là port container Django run.
   - Port `8008` là port trên máy host, map tới `8000` trong container.
-- **`volumes: ./data/catalogue:/app/data`**:
-  - Map thư mục dữ liệu (VD: DB sqlite, file log) từ host vào container.
+- **`environment`**:
+  - Chứa các thông tin kết nối tới PostgreSQL (khi chạy trong Docker).
 
 ---
 
@@ -147,19 +151,32 @@ WSGI_APPLICATION = 'catalogue_service.wsgi.application'
 - **`TEMPLATES`**: cấu hình engine template (mặc định Django, dù service này chủ yếu trả JSON).
 - **`WSGI_APPLICATION`**: entrypoint WSGI nếu deploy bằng gunicorn/uWSGI.
 
-```52:56:catalogue-service/catalogue_service/settings.py
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+```python
+DB_HOST = os.environ.get('DB_HOST')
+
+if DB_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'bookstore_catalogue'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', '1234'),
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+        }
+    }
 ```
 
 - **Database**:
-  - Dùng SQLite file nằm trong `BASE_DIR / 'data' / 'db.sqlite3'`.
-  - Thư mục `data` map ra ngoài container bằng volume trong `docker-compose`.
-  - Với `catalogue-service` hiện tại, DB chủ yếu là placeholder (ít dùng vì service chỉ aggregate từ service khác).
+  - Khi chạy trong Docker (`DB_HOST` được định nghĩa), dùng PostgreSQL làm database.
+  - Khi chạy offline/local không có Docker (`DB_HOST` rỗng), dùng SQLite làm fallback (`db.sqlite3`).
 
 ```59:66:catalogue-service/catalogue_service/settings.py
 LANGUAGE_CODE = 'en-us'
@@ -203,20 +220,14 @@ Trong microservices, mỗi service có **namespace URL riêng** (ở đây là `
 
 ## 5. File `app/views.py` – business logic tổng hợp dữ liệu
 
-```1:9:catalogue-service/app/views.py
-import requests
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-
-BOOK_SERVICE_URL = "http://book-service:8000"
+```python
+BOOK_SERVICE_URL = "http://product-service:8000"
 REVIEW_SERVICE_URL = "http://review-service:8000"
 ```
 
 - **`requests`**: thư viện HTTP client dùng để gọi sang microservice khác.
 - **`BOOK_SERVICE_URL` / `REVIEW_SERVICE_URL`**:
-  - Dùng hostname Docker service (`book-service`, `review-service`) và port `8000`.
+  - Dùng hostname Docker service (`product-service`, `review-service`) và port `8000`.
   - Trong mạng internal của Docker Compose, `book-service` được Docker DNS resolve ra container tương ứng.
 
 ```11:19:catalogue-service/app/views.py

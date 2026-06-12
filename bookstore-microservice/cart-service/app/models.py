@@ -8,8 +8,5 @@ class Cart(models.Model):
 class CartItem(models.Model):
 
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
-    # Hỗ trợ sách (book-service), quần áo (clothe-service), điện tử (electronic-service)
-    book_id = models.IntegerField(null=True, blank=True)
-    clothing_id = models.IntegerField(null=True, blank=True)
-    electronic_id = models.IntegerField(null=True, blank=True)
+    product_id = models.IntegerField(null=True, blank=True)
     quantity = models.IntegerField()

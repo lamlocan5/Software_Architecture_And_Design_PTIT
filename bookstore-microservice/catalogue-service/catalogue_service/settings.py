@@ -49,12 +49,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'catalogue_service.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+import os
+
+DB_HOST = os.environ.get('DB_HOST')
+
+if DB_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'bookstore_catalogue'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', '1234'),
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+        }
+    }
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'

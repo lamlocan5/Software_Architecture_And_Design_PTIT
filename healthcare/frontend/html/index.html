@@ -21,6 +21,7 @@
       <nav class="sidebar-nav">
         <a href="#dashboard"    class="nav-item active" data-page="dashboard">    <span class="nav-icon">📊</span><span>Dashboard</span></a>
         <a href="#patients"     class="nav-item"         data-page="patients">     <span class="nav-icon">👥</span><span>Bệnh nhân</span></a>
+        <a href="#doctors"      class="nav-item"         data-page="doctors">      <span class="nav-icon">🩺</span><span>Bác sĩ</span></a>
         <a href="#appointments" class="nav-item"         data-page="appointments"> <span class="nav-icon">📅</span><span>Lịch hẹn</span></a>
         <a href="#prescriptions"class="nav-item"         data-page="prescriptions"><span class="nav-icon">📋</span><span>Đơn thuốc</span></a>
         <a href="#bills"        class="nav-item"         data-page="bills">        <span class="nav-icon">🧾</span><span>Hóa đơn</span></a>
@@ -30,6 +31,7 @@
         <div class="service-status" id="serviceStatus">
           <div class="status-title">Trạng thái Services</div>
           <div class="status-item"><span class="dot" id="dot-patient"></span>Patient :8001</div>
+          <div class="status-item"><span class="dot" id="dot-doctor"></span>Doctor :8005</div>
           <div class="status-item"><span class="dot" id="dot-clinical"></span>Clinical :8002</div>
           <div class="status-item"><span class="dot" id="dot-billing"></span>Billing :8003</div>
           <div class="status-item"><span class="dot" id="dot-inventory"></span>Inventory :8004</div>
@@ -72,6 +74,7 @@
   <script src="js/api.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/patients.js"></script>
+  <script src="js/doctors.js"></script>
   <script src="js/clinical.js"></script>
   <script src="js/billing.js"></script>
   <script src="js/inventory.js"></script>

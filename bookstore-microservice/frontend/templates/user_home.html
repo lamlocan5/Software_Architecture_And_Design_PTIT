@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Trang cá nhân{% endblock %}
+
+{% block content %}
+<!-- Chào mừng -->
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                 style="width:56px; height:56px; background: linear-gradient(135deg, var(--primary-color), #ff7337); font-size:1.4rem; flex-shrink:0;">
+                {{ request.user.first_name|slice:":1"|upper }}
+            </div>
+            <div>
+                <h3 class="fw-bold mb-0">Xin chào, {{ request.user.first_name }}!</h3>
+                <p class="text-muted mb-0 small">{{ request.user.email }} &nbsp;·&nbsp;
+                    <span class="badge bg-primary">Khách hàng</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-auto">
+        {% if user_customer_id %}
+        <a href="/cart/{{ user_customer_id }}/" class="btn btn-outline-primary shadow-sm">Giỏ hàng của tôi</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid var(--primary-color);">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0" style="color: var(--primary-color);">{{ cart_count }}</h3>
+                <p class="text-muted small mb-0 fw-semibold">Sản phẩm trong giỏ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #ff7337;">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0" style="color: #ff7337;">{{ order_count }}</h3>
+                <p class="text-muted small mb-0 fw-semibold">Đơn hàng của tôi</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center py-3" style="border-left: 4px solid #ffaa00;">
+            <div class="card-body py-2">
+                <h3 class="fw-bold mt-1 mb-0" style="color: #ffaa00;">{{ book_count }}</h3>
+                <p class="text-muted small mb-1 fw-semibold">Sản phẩm của cửa hàng</p>
+                <a href="/books/" class="small text-decoration-none" style="color: var(--primary-color); font-weight: 600;">Xem ngay →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Giỏ hàng -->
+    <div class="col-lg-5">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);">Giỏ hàng của tôi</span>
+                {% if user_customer_id %}
+                <a href="/cart/{{ user_customer_id }}/" class="btn btn-sm btn-outline-primary">Xem đầy đủ</a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if cart_items %}
+                <ul class="list-group list-group-flush">
+                {% for item in cart_items %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-3" style="background-color: transparent;">
+                        <div>
+                            <p class="mb-0 fw-semibold small text-dark">
+                                {% if item.book %}{{ item.book.title }}{% else %}Book #{{ item.book_id }}{% endif %}
+                            </p>
+                            <small class="text-secondary fw-semibold">
+                                {% if item.book %}{{ item.book.price|floatformat:0 }}₫{% endif %}
+                            </small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">x{{ item.quantity }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+                {% if cart_total > 0 %}
+                <div class="p-3 border-top d-flex justify-content-between align-items-center bg-light">
+                    <span class="fw-semibold">Tổng cộng:</span>
+                    <strong class="fs-5" style="color: var(--primary-color);">{{ cart_total|floatformat:0 }} ₫</strong>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <p class="mt-2 small">Giỏ hàng trống</p>
+                    <a href="/books/" class="btn btn-sm btn-primary shadow-sm">Xem sản phẩm ngay</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Đơn hàng gần đây -->
+    <div class="col-lg-7">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);">Đơn hàng gần đây</span>
+                <a href="/orders/" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="card-body p-0">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 small">
+                        <thead>
+                            <tr>
+                                <th>Đơn</th>
+                                <th>Ngày</th>
+                                <th>Trạng thái</th>
+                                <th>Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for order in orders|slice:":5" %}
+                            <tr style="cursor:pointer;" onclick="location.href='/orders/{{ order.id }}/'">
+                                <td><span class="badge bg-secondary">#{{ order.id }}</span></td>
+                                <td class="text-muted">{{ order.created_at|slice:":10" }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}<span class="badge bg-warning">Chờ</span>
+                                    {% elif order.status == 'confirmed' %}<span class="badge bg-info">Xác nhận</span>
+                                    {% elif order.status == 'shipping' %}<span class="badge bg-primary">Đang giao</span>
+                                    {% elif order.status == 'delivered' %}<span class="badge bg-success">Xong</span>
+                                    {% elif order.status == 'cancelled' %}<span class="badge bg-danger">Huỷ</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold" style="color: var(--primary-color);">{{ order.total_amount|floatformat:0 }}₫</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <p class="mt-2 small">Chưa có đơn hàng nào</p>
+                    {% if user_customer_id %}
+                    <a href="/cart/{{ user_customer_id }}/" class="btn btn-sm btn-primary shadow-sm">Đặt hàng ngay</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Thao tác nhanh -->
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);">Thao tác nhanh</span>
+            </div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a href="/books/" class="btn btn-outline-primary">📚 Sách của cửa hàng</a>
+                <a href="/clothes/" class="btn btn-outline-primary">👕 Quần áo thời trang</a>
+                <a href="/electronics/" class="btn btn-outline-primary">💻 Thiết bị điện tử</a>
+                {% if user_customer_id %}
+                <a href="/cart/{{ user_customer_id }}/" class="btn btn-outline-primary">🛒 Vào giỏ hàng</a>
+                {% endif %}
+                <a href="/orders/" class="btn btn-outline-primary">📦 Đơn hàng của tôi</a>
+                <a href="/reviews/" class="btn btn-outline-primary">✍️ Viết đánh giá</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recommended_books %}
+<!-- Gợi ý sách cá nhân hóa của AI -->
+<div class="row g-3 mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, var(--primary-color), #ff7337); color: white;">
+                <span class="fw-bold"><i class="bi bi-magic"></i> Gợi ý dành riêng cho bạn (AI Recommendation)</span>
+                <span class="badge" style="background: rgba(255, 255, 255, 0.2); color: white;">{{ recommended_books|length }} sản phẩm</span>
+            </div>
+            <div class="card-body" style="background-color: #fafafa;">
+                <div class="row g-3">
+                    {% for b in recommended_books %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">{{ b.title }}</div>
+                                    <div class="text-secondary small fw-semibold">{{ b.author }}</div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="mb-3">
+                                        <span class="badge py-2 px-3" style="background: var(--primary-light); color: var(--primary-color); font-size: 0.95rem; font-weight: 700;">
+                                            {{ b.price|floatformat:0 }} ₫
+                                        </span>
+                                    </div>
+                                    {% if b.product_type == 'clothing' %}
+                                        <a href="/clothes/{{ b.id }}/" class="btn btn-sm btn-outline-primary w-100 py-2">Xem chi tiết</a>
+                                    {% elif b.product_type == 'electronic' %}
+                                        <a href="/electronics/{{ b.id }}/" class="btn btn-sm btn-outline-primary w-100 py-2">Xem chi tiết</a>
+                                    {% else %}
+                                        <a href="/books/{{ b.id }}/" class="btn btn-sm btn-outline-primary w-100 py-2">Xem chi tiết</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

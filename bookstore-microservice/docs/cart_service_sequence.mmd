@@ -1,43 +1,47 @@
 sequenceDiagram
   autonumber
-  actor User as User (qua API Gateway)
-  participant Gateway as api-gateway
-  participant CustomerSvc as customer-service
+  actor User as User (Browser)
+  participant UI as frontend (UI)
+  participant BFF as api-gateway (BFF)
+  participant UserSvc as user-service
   participant CartSvc as cart-service
-  participant BookSvc as book-service
-  participant DbCustomer as DB Customer
-  participant DbCart as DB Cart
+  participant ProdSvc as product-service
+  participant Redis as Redis Broker
+  participant DbUser as DB User (MySQL)
+  participant DbCart as DB Cart (PostgreSQL)
 
   rect rgb(230,230,255)
-    Note over User,CustomerSvc: Bước 1 - Tạo Customer -> auto tạo Cart
+    Note over User,CartSvc: Bước 1 - Đăng ký khách hàng -> Khởi tạo giỏ hàng trống (Bất đồng bộ)
 
-    User->>Gateway: Đăng ký khách hàng (form /register hoặc POST /customers/)
-    Gateway->>CustomerSvc: POST /customers/ {name, email, ...}
-    CustomerSvc->>DbCustomer: INSERT Customer
-    DbCustomer-->>CustomerSvc: customer{id}
-    CustomerSvc->>CartSvc: POST /carts/ {customer_id: customer.id}
-    CartSvc->>DbCart: INSERT Cart(customer_id)
-    DbCart-->>CartSvc: cart{id, customer_id}
-    CartSvc-->>CustomerSvc: 200 {cart...}
-    CustomerSvc-->>Gateway: 200 {customer...}
-    Gateway-->>User: Hiển thị khách hàng mới (đồng thời đã có cart rỗng)
+    User->>UI: Đăng ký (form /register/)
+    UI->>UserSvc: POST /customers/ {name, email, password}
+    UserSvc->>DbUser: INSERT Customer
+    DbUser-->>UserSvc: customer_id
+    UserSvc->>Redis: Publish event "customer_created" {customer_id, email, name}
+    UserSvc-->>UI: 201 Created
+    UI-->>User: Chuyển hướng đăng nhập thành công
+    
+    %% Background worker
+    Redis-.->>CartSvc: Consumer nhận event "customer_created"
+    CartSvc->>DbCart: INSERT Cart (customer_id)
+    DbCart-->>CartSvc: cart_id
   end
 
   rect rgb(230,255,230)
-    Note over User,CartSvc: Bước 2 - Thêm sách vào giỏ
+    Note over User,ProdSvc: Bước 2 - Thêm sản phẩm vào giỏ (Đồng bộ)
 
-    User->>Gateway: Thêm vào giỏ hàng (nút trên trang chi tiết sách)
-    Gateway->>CartSvc: POST /carts/add-item/ {cart, book_id, quantity}
-    CartSvc->>BookSvc: GET /books/
-    BookSvc-->>CartSvc: 200 [danh sách books]
+    User->>UI: Thêm vào giỏ hàng
+    UI->>BFF: POST /api/gateway/cart/add-item/
+    BFF->>CartSvc: POST /carts/add-item/ {cart, book_id, quantity}
+    CartSvc->>ProdSvc: GET /products/
+    ProdSvc-->>CartSvc: 200 [danh sách products]
     alt book_id không tồn tại
-      CartSvc-->>Gateway: 200 {error: "Book not found"}
-      Gateway-->>User: Thông báo lỗi "Book not found"
+      CartSvc-->>BFF: 200 {error: "Book not found"}
+      BFF-->>UI: Hiển thị lỗi
     else book_id hợp lệ
       CartSvc->>DbCart: INSERT CartItem(cart, book_id, quantity)
-      DbCart-->>CartSvc: cart_item{id,...}
-      CartSvc-->>Gateway: 200 {cart_item...}
-      Gateway-->>User: Giỏ hàng hiển thị item mới
+      DbCart-->>CartSvc: cart_item
+      CartSvc-->>BFF: 200 {cart_item}
+      BFF-->>UI: Cập nhật giao diện giỏ hàng
     end
   end
-

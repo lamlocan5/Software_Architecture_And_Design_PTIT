@@ -1,14 +1,16 @@
 // ─── API Base URLs ─────────────────────────────────────────
 const API = {
-  patient:   'http://localhost:8001/api/v1',
-  clinical:  'http://localhost:8002/api/v1',
-  billing:   'http://localhost:8003/api/v1',
-  inventory: 'http://localhost:8004/api/v1',
+  patient:   '/api/v1',
+  doctor:    '/api/v1',
+  clinical:  '/api/v1',
+  billing:   '/api/v1',
+  inventory: '/api/v1',
 };
 
 const PAGES = {
   dashboard:    'Dashboard',
   patients:     'Bệnh nhân',
+  doctors:      'Bác sĩ',
   appointments: 'Lịch hẹn',
   prescriptions:'Đơn thuốc',
   bills:        'Hóa đơn',

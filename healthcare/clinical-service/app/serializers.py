@@ -3,10 +3,37 @@ from .models import Appointment, Prescription, PrescriptionItem
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    doctor_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Appointment
         fields = '__all__'
         read_only_fields = ['id', 'created_at']
+
+    def get_doctor_name(self, obj):
+        from django.core.cache import cache
+        from django.conf import settings
+        import requests
+
+        doctor_id = obj.doctor_id
+        cache_key = f"doctor_name_{doctor_id}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        doctor_url = getattr(settings, 'DOCTOR_SERVICE_URL', 'http://doctor-service:8000')
+        try:
+            resp = requests.get(
+                f"{doctor_url}/api/v1/doctors/{doctor_id}/",
+                timeout=2,
+            )
+            if resp.status_code == 200:
+                name = resp.json().get('full_name', f"Bác sĩ #{doctor_id}")
+                cache.set(cache_key, name, 60)
+                return name
+        except Exception:
+            pass
+        return f"Doctor #{doctor_id}"
 
 
 class PrescriptionItemSerializer(serializers.ModelSerializer):

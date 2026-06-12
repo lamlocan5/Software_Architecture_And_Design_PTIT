@@ -10,7 +10,7 @@ class Appointment(models.Model):
     ]
 
     patient_id = models.IntegerField()  # Logical FK → patient-service (không physical)
-    doctor_name = models.CharField(max_length=255)
+    doctor_id = models.IntegerField()  # Logical FK → doctor-service (không physical)
     scheduled_at = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     notes = models.TextField(blank=True, null=True)

@@ -1,49 +1,65 @@
 # 🏥 Healthcare Microservices System
 
-Hệ thống quản lý bệnh viện theo kiến trúc **Microservices** sử dụng **Django REST Framework**, **Docker Compose**, và **MySQL**. Kèm theo **Web Dashboard** được xây dựng bằng HTML/CSS/JS thuần.
+Hệ thống quản lý bệnh viện theo kiến trúc **Microservices** sử dụng **Django REST Framework**, **Docker Compose**, **Nginx (API Gateway)** và **PostgreSQL** trên máy Host. Kèm theo **Web Dashboard** được xây dựng bằng HTML/CSS/JS thuần.
 
 ---
 
 ## 📐 Kiến trúc hệ thống
 
+Hệ thống sử dụng **Nginx** làm **API Gateway** để định tuyến các API request, giới hạn tần suất (Rate Limiting), và bảo mật các service bên trong. Các service backend (`patient-service`, `clinical-service`, `billing-service`, `inventory-service`) được cô lập bên trong mạng Docker Network và chỉ có thể truy cập từ bên ngoài thông qua Gateway tại cổng `8080`.
+
 ```
-                    ┌──────────────────────────────────────────────┐
-                    │              Docker Network                  │
-                    │                                              │
-  :8080  ┌──────────────────┐    ┌──────────────────┐             │
-─────────► Frontend (Nginx) │    │                  │             │
-         └──────────────────┘    │                  │             │
-                                 │                  │             │
-  :8001  ┌──────────────────┐    ┌──────────────────┐  :8002      │
-─────────► patient-service  │    │ clinical-service ◄─────────────│
-         │  db: db_patient  │    │  db: db_clinical │             │
-         └──────────────────┘    └────────┬─────────┘             │
-                                          │                       │
-                                   gọi HTTP (REST)                │
-                                    ┌─────┴──────┐                │
-                                    ▼            ▼                │
-  :8003  ┌──────────────────┐    ┌──────────────────┐  :8004      │
-─────────► billing-service  │    │inventory-service ◄─────────────│
-         │  db: db_billing  │    │ db: db_inventory │             │
-         └──────────────────┘    └──────────────────┘             │
-                    │                                             │
-                    │  ┌──────────────┐  ┌────────┐              │
-                    └──► MySQL :3307  │  │ Redis  │              │
-                        │ (host port) │  │  6379  │              │
-                        └──────────────┘  └────────┘              │
-                    └──────────────────────────────────────────────┘
+                       ┌────────────────────────────────────────────────────────┐
+                       │                   Docker Network                       │
+                       │                                                        │
+     :8080  ┌─────────────────────┐                                             │
+   ─────────► API Gateway (Nginx) │                                             │
+            └──────────┬──────────┘                                             │
+                       │                                                        │
+                       │ (Proxy /api/v1/...)                                    │
+                       ├──────────────┬──────────────┬──────────────┬───────────┤
+                       ▼              ▼              ▼              ▼           │
+              ┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐  │
+              │patient-service││doctor-service││clinical-serv.││billing-serv. │  │
+              │ (Port 8000)  ││ (Port 8000)  ││ (Port 8000)  ││ (Port 8000)  │  │
+              └──────┬───────┘└──────┬───────┘└──────┬───────┘└──────┬───────┘  │
+                     │               │               │               │          │
+                     │               │               ▼ (REST)        │          │
+                     │               │      ┌──────────────────┐     │          │
+                     │               │      │inventory-service │     │          │
+                     │               │      │   (Port 8000)    │     │          │
+                     │               │      └────────┬─────────┘     │          │
+                     │               │               │               │          │
+                     └───────────────┼───────────────┼───────────────┘          │
+                                     │               │                          │
+                                     │               │     ┌────────────────┐   │
+                                     │               │     │    Redis       │   │
+                                     │               │     │  (Port 6379)   │   │
+                                     │               │     └────────────────┘   │
+                       └─────────────┼───────────────┼──────────────────────────┘
+                                     │               │
+                                     ▼               ▼ (host.docker.internal:5432)
+                                   ┌──────────────────────────────────────────┐
+                                   │           Host PostgreSQL                │
+                                   │                                          │
+                                   │ - healthcare_patient                     │
+                                   │ - healthcare_doctor                      │
+                                   │ - healthcare_clinical                    │
+                                   │ - healthcare_billing                     │
+                                   │ - healthcare_inventory                   │
+                                   └──────────────────────────────────────────┘
 ```
 
 ### Luồng nghiệp vụ chính: Kê đơn thuốc
 
 ```
-Doctor → POST /api/v1/prescriptions/  (clinical-service :8002)
+Bác sĩ → POST /api/v1/prescriptions/  (thông qua Gateway :8080 -> clinical-service)
               │
-              ├──► POST /api/v1/internal/deduct-stock/  (inventory-service :8004)
+              ├──► POST /api/v1/internal/deduct-stock/  (inventory-service)
               │         Trừ tồn kho + ghi StockTransaction
               │         Trả về: [{medicine_name, quantity, unit_price}]
               │
-              └──► POST /api/v1/internal/create-bill/   (billing-service :8003)
+              └──► POST /api/v1/internal/create-bill/   (billing-service)
                         Tạo Bill + BillItems với giá từ inventory
 ```
 
@@ -53,92 +69,108 @@ Doctor → POST /api/v1/prescriptions/  (clinical-service :8002)
 
 - **Docker Desktop** >= 4.x
 - **Docker Compose** >= 2.x
-- **MySQL Workbench** >= 8.0 (optional, để xem database)
+- **Python 3.x** cài sẵn trên máy Host (dành cho script tạo db và gieo dữ liệu mẫu).
+- Thư viện Python trên máy Host: `pip install psycopg2-binary` (để chạy các script khởi tạo).
+- **PostgreSQL** chạy trên máy Host tại cổng `5432`.
+  - Tài khoản mặc định: `postgres` / mật khẩu: `1234` (hoặc thay đổi cấu hình tương ứng trong các file `.env`).
 
 ---
 
-## 🚀 Cách setup và chạy
+## 🚀 Cách setup và chạy tự động (Khuyên dùng)
 
-### Bước 1: Clone project
+Hệ thống cung cấp kịch bản khởi chạy tự động hóa hoàn toàn từ đầu đến cuối thông qua một click đúp chuột hoặc một câu lệnh duy nhất.
 
-```bash
-git clone <repository-url>
-cd healthcare
+### Trên Windows
+Nhấp đúp chuột vào file **`run.bat`** hoặc chạy từ terminal:
+```cmd
+run.bat
 ```
 
-### Bước 2: Kiểm tra file `.env` (đã có sẵn)
-
-Mỗi service đã có file `.env` với cấu hình mặc định. Mật khẩu MySQL: `123456789`.
-
-| File | DB |
-|---|---|
-| `patient-service/.env` | `db_patient` |
-| `clinical-service/.env` | `db_clinical` |
-| `billing-service/.env` | `db_billing` |
-| `inventory-service/.env` | `db_inventory` |
-
-### Bước 3: Khởi động toàn bộ hệ thống
-
+### Trên macOS / Linux / Git Bash
+Chạy lệnh cấp quyền thực thi và khởi chạy file **`run.sh`**:
 ```bash
-docker compose up --build -d
+chmod +x run.sh
+./run.sh
 ```
 
-> **Lần đầu build mất 3–5 phút.** Mỗi service sẽ tự động:
-> 1. `makemigrations app` — tạo migration files từ models
-> 2. `migrate` — áp dụng migration lên MySQL
-> 3. `seed_medicines` *(chỉ inventory)* — seed 10 loại thuốc mặc định
-> 4. `runserver` — khởi động server
+**Kịch bản tự động sẽ thực hiện:**
+1. Tạo 4 database riêng biệt trên PostgreSQL máy Host: `healthcare_patient`, `healthcare_clinical`, `healthcare_billing`, `healthcare_inventory` (thông qua `create_databases.py`).
+2. Khởi dựng và build các container qua Docker Compose (`docker compose up --build -d`).
+3. Đợi các service chạy hoàn thành migrations cấu trúc bảng.
+4. Gieo dữ liệu mẫu tiếng Việt phong phú vào các cơ sở dữ liệu mới tạo (thông qua `feed_data.py`).
+5. Tự động mở trình duyệt truy cập dashboard tại địa chỉ **http://localhost:8080**.
 
-### Bước 4: Kiểm tra trạng thái
+---
 
-```bash
-docker compose ps
-docker compose logs -f
-```
+## ⚙️ Cấu hình chi tiết cơ sở dữ liệu
 
-### Bước 5: Mở Dashboard
+Mỗi service kết nối tới cơ sở dữ liệu PostgreSQL tương ứng trên máy Host thông qua định danh đặc biệt `host.docker.internal` (đại diện cho localhost của máy Host nhìn từ bên trong Docker container).
 
-Truy cập **http://localhost:8080** trên trình duyệt.
+| Thư mục Service | Tên cơ sở dữ liệu | Cổng | Người dùng | Mật khẩu |
+|---|---|---|---|---|
+| `patient-service` | `healthcare_patient` | `5432` | `postgres` | `1234` |
+| `doctor-service` | `healthcare_doctor` | `5432` | `postgres` | `1234` |
+| `clinical-service` | `healthcare_clinical` | `5432` | `postgres` | `1234` |
+| `billing-service` | `healthcare_billing` | `5432` | `postgres` | `1234` |
+| `inventory-service` | `healthcare_inventory` | `5432` | `postgres` | `1234` |
+
+*Để thay đổi các giá trị này, bạn chỉ cần sửa đổi file `.env` nằm trong từng thư mục của service tương ứng.*
+
+---
+
+## 🛡️ API Gateway & Bảo mật (Nginx)
+
+Nginx được cấu hình tại cổng `8080` đóng vai trò là API Gateway duy nhất tương tác với bên ngoài.
+
+1. **Che giấu cổng dịch vụ**: Các cổng Backend từ `8001` tới `8005` không còn được expose ra máy host để tránh các truy cập trực tiếp vượt qua kiểm soát.
+2. **Rate Limiting (Giới hạn tần suất)**: Giới hạn mỗi IP tối đa **10 requests/giây**, cho phép burst tối đa **20 requests** với cơ chế `nodelay`.
+3. **OWASP Security Headers**: Tự động chèn các HTTP headers bảo mật:
+   - `X-Frame-Options: SAMEORIGIN` (chống Clickjacking)
+   - `X-XSS-Protection: 1; mode=block` (chống Cross-Site Scripting)
+   - `X-Content-Type-Options: nosniff` (chống Sniffing mime-type)
+   - `Referrer-Policy: no-referrer-when-downgrade` (bảo vệ thông tin referrer)
+4. **Hardening**: Giới hạn tối đa kích thước body gửi lên `client_max_body_size 10M` và cấu hình các timeouts tối ưu để ngăn chặn tấn công chậm (slowloris).
+5. **Gzip Compression**: Tự động nén dữ liệu dạng text, css, js, json để tối ưu hóa băng thông truyền tải.
 
 ---
 
 ## 🖥️ Web Dashboard (http://localhost:8080)
 
-Dashboard được xây dựng bằng HTML/CSS/JS thuần, phục vụ qua **Nginx**.
+Dashboard giao diện đẹp mắt (Dark mode & Glassmorphism) được phục vụ tĩnh qua Nginx định tuyến các API request tương đối về `/api/v1`.
 
 | Trang | Chức năng |
 |---|---|
-| 📊 **Dashboard** | Tổng quan: số bệnh nhân, lịch hẹn, hóa đơn, kho thuốc |
-| 👥 **Bệnh nhân** | Danh sách, thêm mới, xem chi tiết + lịch hẹn |
-| 📅 **Lịch hẹn** | Tạo lịch hẹn, cập nhật trạng thái |
-| 📋 **Đơn thuốc** | Kê đơn (tự động trừ kho + tạo hóa đơn) |
-| 🧾 **Hóa đơn** | Danh sách, xem chi tiết, thanh toán |
-| 💊 **Kho thuốc** | Danh sách thuốc, nhập/xuất kho, lịch sử giao dịch |
+| 📊 **Dashboard** | Tổng quan: số bệnh nhân, bác sĩ, lịch hẹn, hóa đơn, kho thuốc |
+| 👥 **Bệnh nhân** | Danh sách bệnh nhân (tự động phân trang), thêm mới, xem chi tiết + lịch hẹn của bệnh nhân |
+| 🩺 **Bác sĩ** | Danh sách bác sĩ, thêm mới, xem chi tiết + lịch hẹn của bác sĩ |
+| 📅 **Lịch hẹn** | Tạo lịch hẹn mới (lựa chọn bác sĩ trực quan từ dropdown), cập nhật trạng thái |
+| 📋 **Đơn thuốc** | Kê đơn (tự động cập nhật giảm số lượng thuốc trong kho và tạo hóa đơn nháp tương ứng) |
+| 🧾 **Hóa đơn** | Danh sách hóa đơn, xem chi tiết các khoản, thanh toán trực tiếp |
+| 💊 **Kho thuốc** | Quản lý thuốc, nhập/xuất kho thủ công, xem lịch sử giao dịch chi tiết |
 
 ---
 
-## 🔌 Kết nối MySQL Workbench
+## 🔌 Kết nối PostgreSQL qua Client (pgAdmin, DBeaver, v.v.)
 
-> **Lưu ý:** Port host là `3307` (không phải 3306) để tránh xung đột với MySQL local.
+Bạn có thể kết nối trực tiếp đến PostgreSQL máy host để kiểm tra dữ liệu:
 
-| Field    | Value         |
-|----------|---------------|
-| Host     | `127.0.0.1`   |
-| Port     | `3307`        |
-| User     | `root`        |
-| Password | `123456789`   |
-
-4 databases: `db_patient`, `db_clinical`, `db_billing`, `db_inventory`
+- **Host**: `127.0.0.1` hoặc `localhost`
+- **Port**: `5432`
+- **User**: `postgres`
+- **Password**: `1234`
+- **Databases**: `healthcare_patient`, `healthcare_doctor`, `healthcare_clinical`, `healthcare_billing`, `healthcare_inventory`
 
 ---
 
-## 📋 API Documentation
+## 📋 Hướng dẫn sử dụng API (Thông qua Gateway :8080)
 
-### 1. Patient Service — `http://localhost:8001`
+Do các cổng dịch vụ riêng lẻ đã được ẩn đi, tất cả các yêu cầu API từ bên ngoài đều phải đi qua Gateway tại cổng `8080`.
+
+### 1. Dịch vụ Bệnh nhân (Patient Service)
 
 #### Tạo bệnh nhân mới
 ```bash
-curl -X POST http://localhost:8001/api/v1/patients/ \
+curl -X POST http://localhost:8080/api/v1/patients/ \
   -H "Content-Type: application/json" \
   -d '{
     "full_name": "Nguyễn Văn An",
@@ -150,45 +182,70 @@ curl -X POST http://localhost:8001/api/v1/patients/ \
   }'
 ```
 
-#### Danh sách / Chi tiết / Xóa bệnh nhân
+#### Danh sách / Chi tiết bệnh nhân
 ```bash
-curl http://localhost:8001/api/v1/patients/
-curl http://localhost:8001/api/v1/patients/1/
-curl -X DELETE http://localhost:8001/api/v1/patients/1/
+curl http://localhost:8080/api/v1/patients/
+curl http://localhost:8080/api/v1/patients/1/
 ```
 
 #### Xem lịch hẹn của bệnh nhân
 ```bash
-curl http://localhost:8001/api/v1/patients/1/appointments/
+curl http://localhost:8080/api/v1/patients/1/appointments/
 ```
 
 ---
 
-### 2. Clinical Service — `http://localhost:8002`
+### 5. Dịch vụ Bác sĩ (Doctor Service)
 
-#### Tạo lịch hẹn
+#### Tạo bác sĩ mới
 ```bash
-curl -X POST http://localhost:8002/api/v1/appointments/ \
+curl -X POST http://localhost:8080/api/v1/doctors/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Bác sĩ Nguyễn Văn An",
+    "specialty": "Tai Mũi Họng",
+    "phone": "0911223344",
+    "email": "annv@healthcare.com"
+  }'
+```
+
+#### Danh sách / Chi tiết bác sĩ
+```bash
+curl http://localhost:8080/api/v1/doctors/
+curl http://localhost:8080/api/v1/doctors/1/
+```
+
+#### Xem lịch hẹn của bác sĩ
+```bash
+curl http://localhost:8080/api/v1/doctors/1/appointments/
+```
+
+---
+
+### 2. Dịch vụ Lâm sàng (Clinical Service)
+
+#### Tạo lịch hẹn khám
+```bash
+curl -X POST http://localhost:8080/api/v1/appointments/ \
   -H "Content-Type: application/json" \
   -d '{
     "patient_id": 1,
-    "doctor_name": "BS. Trần Minh Khoa",
-    "scheduled_at": "2024-12-20T09:00:00",
+    "doctor_id": 1,
+    "scheduled_at": "2026-12-20T09:00:00",
     "notes": "Khám định kỳ"
   }'
 ```
 
 #### Cập nhật trạng thái lịch hẹn
 ```bash
-curl -X PATCH http://localhost:8002/api/v1/appointments/1/ \
+curl -X PATCH http://localhost:8080/api/v1/appointments/1/ \
   -H "Content-Type: application/json" \
   -d '{"status": "confirmed"}'
-# status: pending | confirmed | completed | cancelled
 ```
 
-#### Kê đơn thuốc (tự động trừ kho + tạo hóa đơn)
+#### Kê đơn thuốc (Hệ thống tự động trừ kho thuốc & sinh hóa đơn)
 ```bash
-curl -X POST http://localhost:8002/api/v1/prescriptions/ \
+curl -X POST http://localhost:8080/api/v1/prescriptions/ \
   -H "Content-Type: application/json" \
   -d '{
     "appointment": 1,
@@ -196,230 +253,97 @@ curl -X POST http://localhost:8002/api/v1/prescriptions/ \
     "diagnosis": "Cảm cúm thông thường, viêm họng nhẹ",
     "items": [
       {"medicine_name": "Paracetamol 500mg", "quantity": 10, "dosage": "2 viên/lần, 3 lần/ngày"},
-      {"medicine_name": "Amoxicillin 500mg", "quantity": 6,  "dosage": "1 viên/lần, 3 lần/ngày"},
-      {"medicine_name": "Vitamin C 1000mg",  "quantity": 5,  "dosage": "1 viên/ngày"}
+      {"medicine_name": "Amoxicillin 500mg", "quantity": 6,  "dosage": "1 viên/lần, 3 lần/ngày"}
     ]
   }'
 ```
 
 ---
 
-### 3. Billing Service — `http://localhost:8003`
+### 3. Dịch vụ Hóa đơn (Billing Service)
 
-#### Danh sách / Chi tiết hóa đơn
+#### Lấy danh sách hóa đơn
 ```bash
-curl http://localhost:8003/api/v1/bills/
-curl http://localhost:8003/api/v1/bills/1/
-# Filter theo bệnh nhân:
-curl "http://localhost:8003/api/v1/bills/?patient_id=1"
+curl http://localhost:8080/api/v1/bills/
 ```
 
 #### Thanh toán hóa đơn
 ```bash
-curl -X PUT http://localhost:8003/api/v1/bills/1/pay/
+curl -X PUT http://localhost:8080/api/v1/bills/1/pay/
 ```
 
 ---
 
-### 4. Inventory Service — `http://localhost:8004`
+### 4. Dịch vụ Kho thuốc (Inventory Service)
 
-#### Danh sách thuốc
+#### Xem danh sách các loại thuốc
 ```bash
-curl http://localhost:8004/api/v1/medicines/
+curl http://localhost:8080/api/v1/medicines/
 ```
 
-#### Thêm thuốc mới
+#### Nhập kho thêm thuốc
 ```bash
-curl -X POST http://localhost:8004/api/v1/medicines/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Cetirizine 10mg",
-    "unit": "viên",
-    "stock": 200,
-    "unit_price": "4500.00"
-  }'
-```
-
-#### Nhập / Xuất kho thủ công
-```bash
-# Nhập kho
-curl -X PATCH http://localhost:8004/api/v1/medicines/1/stock/ \
+curl -X PATCH http://localhost:8080/api/v1/medicines/1/stock/ \
   -H "Content-Type: application/json" \
   -d '{"quantity": 100, "transaction_type": "import"}'
-
-# Xuất kho
-curl -X PATCH http://localhost:8004/api/v1/medicines/1/stock/ \
-  -H "Content-Type: application/json" \
-  -d '{"quantity": 10, "transaction_type": "export"}'
 ```
 
-#### Lịch sử xuất nhập kho
+#### Xem lịch sử các giao dịch kho
 ```bash
-curl http://localhost:8004/api/v1/stock-transactions/
+curl http://localhost:8080/api/v1/stock-transactions/
 ```
 
 ---
 
-## 🔄 Luồng nghiệp vụ đầy đủ (Step-by-step)
-
-```
-Bước 1: Tạo bệnh nhân
-  POST :8001/api/v1/patients/
-  → Patient ID = 1
-
-Bước 2: Đặt lịch hẹn
-  POST :8002/api/v1/appointments/  {patient_id: 1, ...}
-  → Appointment ID = 1
-
-Bước 3: Xác nhận lịch hẹn
-  PATCH :8002/api/v1/appointments/1/  {status: "confirmed"}
-
-Bước 4: Kê đơn thuốc (trigger tự động)
-  POST :8002/api/v1/prescriptions/  {appointment: 1, items: [...]}
-  → clinical-service gọi:
-     ✅ :8004/api/v1/internal/deduct-stock/   ← kho giảm
-     ✅ :8003/api/v1/internal/create-bill/    ← hóa đơn nháp được tạo
-
-Bước 5: Kiểm tra hóa đơn
-  GET :8003/api/v1/bills/   → thấy bill mới, status="draft"
-
-Bước 6: Thanh toán
-  PUT :8003/api/v1/bills/1/pay/
-  → status = "paid", paid_at = now()
-
-Bước 7: Kiểm tra kho đã giảm
-  GET :8004/api/v1/stock-transactions/  → thấy export transactions
-```
-
----
-
-## 🗂️ Cấu trúc thư mục
+## 🗂️ Cấu trúc thư mục dự án
 
 ```
 healthcare/
-├── docker-compose.yml        ← MySQL:3307, Redis:6379, 4 services, Frontend:8080
-├── init-db.sql               ← Tạo 4 databases tự động
+├── docker-compose.yml        ← Docker Compose khởi chạy 5 service, Redis & API Gateway
+├── create_databases.py       ← Khởi tạo 5 database trên PostgreSQL máy Host
+├── feed_data.py              ← Script gieo dữ liệu mẫu tiếng Việt đa dạng
+├── run.bat                   ← Kịch bản click đúp chuột chạy tự động trên Windows
+├── run.sh                    ← Kịch bản chạy tự động trên macOS/Linux/Git Bash
 ├── .env.example
-├── README.md
+├── README.md                 ← Tài liệu hướng dẫn sử dụng này
 │
-├── frontend/                 ← Web Dashboard (Nginx)
-│   ├── nginx.conf
-│   └── html/
-│       ├── index.html
-│       ├── css/style.css     ← Dark mode, glassmorphism
-│       └── js/
-│           ├── config.js     ← API URLs
-│           ├── api.js        ← API wrappers + health check
-│           ├── app.js        ← Router, toast, modal
-│           ├── dashboard.js
-│           ├── patients.js
-│           ├── clinical.js   ← Appointments + Prescriptions
-│           ├── billing.js
-│           └── inventory.js
+├── frontend/                 ← Web Dashboard chạy thông qua Nginx API Gateway
+│   ├── nginx.conf            ← Định cấu hình Gateway, Security Headers, Rate limiting, Gzip
+│   └── html/                 ← Mã nguồn HTML/CSS/JS tĩnh của frontend
 │
-├── patient-service/          ← Port 8001 | DB: db_patient
-│   ├── Dockerfile            ← makemigrations → migrate → runserver
-│   ├── requirements.txt
-│   ├── .env
-│   ├── manage.py
-│   ├── patient_service/
-│   │   ├── settings.py       ← CORS enabled
-│   │   └── urls.py
-│   └── app/
-│       ├── models.py         ← Patient
-│       ├── serializers.py    ← Phone validation VN
-│       ├── views.py          ← ModelViewSet + appointments action
-│       └── urls.py
-│
-├── clinical-service/         ← Port 8002 | DB: db_clinical
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env
-│   └── app/
-│       ├── models.py         ← Appointment, Prescription, PrescriptionItem
-│       ├── views.py          ← Trigger _notify_services() sau khi tạo Prescription
-│       └── urls.py
-│
-├── billing-service/          ← Port 8003 | DB: db_billing
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env
-│   └── app/
-│       ├── models.py         ← Bill, BillItem
-│       ├── views.py          ← pay action + internal create-bill endpoint
-│       └── urls.py
-│
-└── inventory-service/        ← Port 8004 | DB: db_inventory
-    ├── Dockerfile            ← makemigrations → migrate → seed → runserver
-    ├── requirements.txt
-    ├── .env
-    └── app/
-        ├── models.py         ← Medicine, StockTransaction
-        ├── views.py          ← stock action + internal deduct-stock endpoint
-        ├── urls.py
-        └── management/
-            └── commands/
-                └── seed_medicines.py  ← 10 loại thuốc mặc định
+├── patient-service/          ← Dịch vụ quản lý thông tin bệnh nhân (Cổng Docker nội bộ: 8000)
+├── doctor-service/           ← Dịch vụ quản lý bác sĩ (Cổng Docker nội bộ: 8000)
+├── clinical-service/         ← Dịch vụ quản lý lâm sàng, lịch hẹn & kê đơn (Cổng Docker nội bộ: 8000)
+├── billing-service/          ← Dịch vụ quản lý hóa đơn & thanh toán (Cổng Docker nội bộ: 8000)
+└── inventory-service/        ← Dịch vụ quản lý kho thuốc & nhập xuất (Cổng Docker nội bộ: 8000)
 ```
 
 ---
 
-## 🔐 Internal Service Authentication
+## 🛠️ Một số lệnh thủ công hữu ích
 
-Giao tiếp giữa các services dùng header `X-Internal-Key`:
-```
-X-Internal-Key: super-secret-internal-key-2024
-```
-
-Các internal endpoints (không expose ra ngoài):
-- `POST :8004/api/v1/internal/deduct-stock/` — trừ kho, trả về unit_price
-- `POST :8003/api/v1/internal/create-bill/` — tạo hóa đơn nháp
-
----
-
-## 🛠️ Troubleshooting
-
-### Xem logs một service cụ thể
+### Xem logs của một service cụ thể
 ```bash
-docker compose logs -f inventory-service
-docker compose logs -f clinical-service
+docker compose logs -f patient-service
+docker compose logs -f api-gateway
 ```
 
-### Migrate thủ công (nếu cần)
+### Chạy lại migrations thủ công
 ```bash
-docker compose exec patient-service   python manage.py makemigrations app
 docker compose exec patient-service   python manage.py migrate
-docker compose exec clinical-service  python manage.py makemigrations app
+docker compose exec doctor-service    python manage.py migrate
 docker compose exec clinical-service  python manage.py migrate
-docker compose exec billing-service   python manage.py makemigrations app
 docker compose exec billing-service   python manage.py migrate
-docker compose exec inventory-service python manage.py makemigrations app
 docker compose exec inventory-service python manage.py migrate
 ```
 
-### Seed lại dữ liệu thuốc
+### Chạy lại script gieo dữ liệu mẫu
 ```bash
-docker compose exec inventory-service python manage.py seed_medicines
+python feed_data.py
 ```
 
-### Reset toàn bộ (xóa data)
+### Reset toàn bộ hệ thống (xóa các container cũ và dựng lại)
 ```bash
 docker compose down -v
 docker compose up --build -d
-```
-
-### Lỗi port 3306 đã dùng
-Port host của MySQL đã được đổi sang **3307** để tránh xung đột với MySQL local. Nếu 3307 cũng bị chiếm, sửa trong `docker-compose.yml`:
-```yaml
-ports:
-  - "3308:3306"   # đổi 3307 thành port khác
-```
-Và cập nhật kết nối MySQL Workbench tương ứng.
-
-### Lỗi tồn kho không đủ
-```bash
-# Nhập thêm kho cho thuốc ID=1
-curl -X PATCH http://localhost:8004/api/v1/medicines/1/stock/ \
-  -H "Content-Type: application/json" \
-  -d '{"quantity": 500, "transaction_type": "import"}'
 ```

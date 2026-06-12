@@ -23,6 +23,16 @@ const PatientAPI = {
   appointments: (id) => apiFetch(`${API.patient}/patients/${id}/appointments/`),
 };
 
+// ─── Doctor Service ─────────────────────────────────────────
+const DoctorAPI = {
+  list:   ()       => apiFetch(`${API.doctor}/doctors/`),
+  get:    (id)     => apiFetch(`${API.doctor}/doctors/${id}/`),
+  create: (data)   => apiFetch(`${API.doctor}/doctors/`,   { method: 'POST',   body: JSON.stringify(data) }),
+  update: (id, d)  => apiFetch(`${API.doctor}/doctors/${id}/`, { method: 'PUT', body: JSON.stringify(d) }),
+  delete: (id)     => apiFetch(`${API.doctor}/doctors/${id}/`, { method: 'DELETE' }),
+  appointments: (id) => apiFetch(`${API.doctor}/doctors/${id}/appointments/`),
+};
+
 // ─── Clinical Service ──────────────────────────────────────
 const ClinicalAPI = {
   listAppointments:   ()      => apiFetch(`${API.clinical}/appointments/`),
@@ -59,6 +69,7 @@ async function checkService(name, url, dotId) {
 
 function checkAllServices() {
   checkService('patient',   `${API.patient}/patients/?page=1`,          'dot-patient');
+  checkService('doctor',    `${API.doctor}/doctors/?page=1`,            'dot-doctor');
   checkService('clinical',  `${API.clinical}/appointments/?page=1`,     'dot-clinical');
   checkService('billing',   `${API.billing}/bills/?page=1`,             'dot-billing');
   checkService('inventory', `${API.inventory}/medicines/?page=1`,       'dot-inventory');

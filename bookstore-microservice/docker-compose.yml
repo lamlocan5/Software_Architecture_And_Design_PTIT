@@ -2,116 +2,277 @@ version: "3"
 
 services:
 
-  customer-service:
-    build: ./customer-service
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  user-service:
+    build: ./user-service
     ports:
       - "8001:8000"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${MYSQL_PORT:-3306}
+      - DB_USER=root
+      - DB_PASSWORD=${MYSQL_PASSWORD:-123456789}
+      - DB_NAME=bookstore_user
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./data/customer:/app/data
+      - django_logs:/app/logs
+    depends_on:
+      - redis
 
-  book-service:
-    build: ./book-service
+  product-service:
+    build: ./product-service
     ports:
       - "8002:8000"
-    volumes:
-      - ./data/book:/app/data
-
-  clothe-service:
-    build: ./clothe-service
-    ports:
-      - "8012:8000"
-    volumes:
-      - ./data/clothe:/app/data
-
-  electronic-service:
-    build: ./electronic-service
-    ports:
-      - "8013:8000"
-    volumes:
-      - ./data/electronic:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_product
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   cart-service:
     build: ./cart-service
     ports:
       - "8003:8000"
-    volumes:
-      - ./data/cart:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_cart
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
 
   order-service:
     build: ./order-service
     ports:
       - "8004:8000"
-    volumes:
-      - ./data/order:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_order
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
 
   review-service:
     build: ./review-service
     ports:
       - "8005:8000"
-    volumes:
-      - ./data/review:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_review
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   catalogue-service:
     build: ./catalogue-service
     ports:
       - "8008:8000"
-    volumes:
-      - ./data/catalogue:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_catalogue
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  ship-service:
-    build: ./ship-service
+  shipping-service:
+    build: ./shipping-service
     ports:
       - "8006:8000"
-    volumes:
-      - ./data/ship:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_shipping
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
 
-  pay-service:
-    build: ./pay-service
+  payment-service:
+    build: ./payment-service
     ports:
       - "8007:8000"
-    volumes:
-      - ./data/pay:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_payment
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
 
-  staff-service:
-    build: ./staff-service
+  notification-service:
+    build: ./notification-service
     ports:
       - "8009:8000"
-    volumes:
-      - ./data/staff:/app/data
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_notification
+      - REDIS_HOST=redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
 
-  manager-service:
-    build: ./manager-service
+  neo4j:
+    image: neo4j:5.12.0
+    container_name: bookstore-neo4j
     ports:
-      - "8010:8000"
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
     volumes:
-      - ./data/manager:/app/data
+      - neo4j_data:/data
 
-  recommender-ai-service:
-    build: ./recommender-ai-service
+  ai-service:
+    build: ./ai-service
     ports:
       - "8011:8000"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    volumes:
-      - ./data/recommender-ai:/app/data
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_ai
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=password123
+      - NEO4J_URI=bolt://neo4j:7687
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - neo4j
 
   api-gateway:
     build: ./api-gateway
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_gateway
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./data/gateway:/app/data
+      - django_logs:/app/logs
     depends_on:
-      - customer-service
-      - book-service
-      - clothe-service
-      - electronic-service
+      - user-service
+      - product-service
       - cart-service
       - order-service
       - review-service
       - catalogue-service
-      - ship-service
-      - pay-service
-      - staff-service
-      - manager-service
-      - recommender-ai-service
+      - shipping-service
+      - payment-service
+      - ai-service
+      - notification-service
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "8000"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - DB_NAME=bookstore_frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - django_logs:/app/logs
+    depends_on:
+      - api-gateway
+
+  nginx-gateway:
+    image: nginx:alpine
+    container_name: bookstore-nginx-gateway
+    ports:
+      - "8000:80"
+    volumes:
+      - ./api-gateway/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api-gateway
+      - frontend
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bookstore-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./tools/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api-gateway
+      - frontend
+      - user-service
+
+  loki:
+    image: grafana/loki:latest
+    container_name: bookstore-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./tools/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: bookstore-promtail
+    volumes:
+      - ./tools/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - nginx_logs:/var/log/nginx:ro
+      - django_logs:/var/log/django:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bookstore-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./tools/grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  neo4j_data:
+  django_logs:
+  nginx_logs:

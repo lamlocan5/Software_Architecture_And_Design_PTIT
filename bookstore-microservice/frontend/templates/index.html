@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ{% endblock %}
+
+{% block content %}
+<!-- Custom styles for professional dashboard -->
+<style>
+    .dashboard-header {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        border-top: 3px solid var(--primary-color);
+    }
+    .stat-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(238, 77, 45, 0.15) !important;
+    }
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    .status-online {
+        background-color: #e8f7ed;
+        color: #2ece6b;
+        border: 1px solid #cbf0d7;
+    }
+    .status-offline {
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        border: 1px solid #ffd4cd;
+    }
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .pulse-online {
+        background-color: #2ece6b;
+        box-shadow: 0 0 0 0 rgba(46, 206, 107, 0.4);
+        animation: pulse-green 2s infinite;
+    }
+    .pulse-offline {
+        background-color: var(--primary-color);
+        box-shadow: 0 0 0 0 rgba(238, 77, 45, 0.4);
+        animation: pulse-red 2s infinite;
+    }
+    @keyframes pulse-green {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(46, 206, 107, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(46, 206, 107, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(46, 206, 107, 0);
+        }
+    }
+    @keyframes pulse-red {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(238, 77, 45, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(238, 77, 45, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(238, 77, 45, 0);
+        }
+    }
+    .quick-btn {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+    }
+    .quick-btn:hover {
+        transform: scale(1.02) translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
+        opacity: 0.95;
+    }
+</style>
+
+<div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark">
+            {% if is_admin %}Admin Dashboard{% elif is_manager_role %}Manager Dashboard{% else %}Staff Dashboard{% endif %}
+        </h2>
+        <p class="text-secondary mb-0">
+            {% if is_admin %}
+                Tổng quan hệ thống phân tán Bookstore Microservices của bạn.
+            {% elif is_manager_role %}
+                Tổng quan sách, khách hàng và đơn hàng bạn quản lý.
+            {% else %}
+                Tổng quan công việc vận hành: sách, khách hàng, đơn hàng.
+            {% endif %}
+        </p>
+    </div>
+    {% if is_admin %}
+    <div>
+        <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm" style="background: var(--primary-color) !important;">
+            Hệ thống: Live Mode
+        </span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Thống kê khoa học dạng Grid đều -->
+<div class="row g-3 mb-4">
+    <!-- Cột 1: Sách -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, var(--primary-color), #ff7337);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Tổng số sách</p>
+                    <h2 class="mb-3 fw-bold display-6">{{ book_count }}</h2>
+                </div>
+                <a href="/books/" class="text-white text-decoration-none small mt-auto fw-medium">Quản lý sách →</a>
+            </div>
+        </div>
+    </div>
+    <!-- Cột 2: Khách hàng -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, #ff7337, #ff9b50);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Khách hàng</p>
+                    <h2 class="mb-3 fw-bold display-6">{{ customer_count }}</h2>
+                </div>
+                <a href="/customers/" class="text-white text-decoration-none small mt-auto fw-medium">Quản lý khách →</a>
+            </div>
+        </div>
+    </div>
+    <!-- Cột 3: Đơn hàng -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, #e52d27, #b31217);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Đơn hàng</p>
+                    <h2 class="mb-3 fw-bold display-6">{{ order_count }}</h2>
+                </div>
+                <a href="/orders/" class="text-white text-decoration-none small mt-auto fw-medium">Quản lý đơn →</a>
+            </div>
+        </div>
+    </div>
+    <!-- Cột 4: Đánh giá -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, #ffaa00, #ffc107);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Đánh giá</p>
+                    <h2 class="mb-3 fw-bold display-6">{{ review_count }}</h2>
+                </div>
+                <a href="/reviews/" class="text-white text-decoration-none small mt-auto fw-medium">Xem đánh giá →</a>
+            </div>
+        </div>
+    </div>
+    <!-- Cột 5: Nhà xuất bản -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, #ff5722, #ff8a65);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Nhà xuất bản</p>
+                    <h2 class="mb-3 fw-bold display-6">{{ publisher_count }}</h2>
+                </div>
+                <a href="/publishers/" class="text-white text-decoration-none small mt-auto fw-medium">Quản lý NXB →</a>
+            </div>
+        </div>
+    </div>
+    <!-- Cột 6: Microservices -->
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card text-white h-100 shadow-sm" style="background: linear-gradient(135deg, #d31027, #ea384d);">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75 small fw-semibold text-uppercase">Microservices</p>
+                    {% if is_admin %}
+                    <h2 class="mb-3 fw-bold display-6">{{ services_online_count }}/{{ service_count }}</h2>
+                    {% else %}
+                    <h2 class="mb-3 fw-bold display-6">Active</h2>
+                    {% endif %}
+                </div>
+                <div class="mt-auto">
+                    {% if is_admin %}
+                    <span class="text-white small opacity-75 fw-medium">Đang hoạt động</span>
+                    {% else %}
+                    <span class="text-white small opacity-75 fw-medium">Hệ thống ổn định</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Live Microservices Monitor (Chỉ Admin mới có thể kiểm soát trực tiếp) -->
+    <div class="col-lg-7">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);"><i class="bi bi-cpu-fill"></i> Giám sát Trạng thái Dịch vụ (Live Monitor)</span>
+                <span class="badge bg-secondary">Tổng số: {{ service_count }} dịch vụ</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Tên Microservice</th>
+                                <th>Cổng nội bộ</th>
+                                <th style="width: 140px;">Trạng thái</th>
+                                <th>Nhiệm vụ chính</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in services_status %}
+                            <tr>
+                                <td class="fw-semibold">{{ s.name }}</td>
+                                <td><code>{{ s.port }}</code></td>
+                                <td>
+                                    {% if s.status == "online" %}
+                                        <span class="status-indicator status-online">
+                                            <span class="pulse-dot pulse-online"></span>Hoạt động
+                                        </span>
+                                    {% else %}
+                                        <span class="status-indicator status-offline">
+                                            <span class="pulse-dot pulse-offline"></span>Ngoại tuyến
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ s.desc }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions sắp xếp khoa học -->
+    <div class="col-lg-5">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);"><i class="bi bi-lightning-charge-fill"></i> Thao tác nhanh</span>
+            </div>
+            <div class="card-body d-flex flex-column gap-3 p-4" style="background-color: #fafafa;">
+                <a href="/books/" class="btn quick-btn py-3 text-start text-white shadow-sm" style="background: linear-gradient(135deg, var(--primary-color), #ff7337);">
+                    <div class="fw-bold fs-5 mb-1">📚 Quản lý Sách</div>
+                    <small class="opacity-75">Thêm sách mới, chỉnh sửa thông tin sách</small>
+                </a>
+                
+                <a href="/clothes/" class="btn quick-btn py-3 text-start text-white shadow-sm" style="background: linear-gradient(135deg, #ff7337, #ff9b50);">
+                    <div class="fw-bold fs-5 mb-1">👕 Quản lý Quần áo</div>
+                    <small class="opacity-75">Xem, thêm, chỉnh sửa, xoá sản phẩm thời trang</small>
+                </a>
+                
+                <a href="/electronics/" class="btn quick-btn py-3 text-start text-white shadow-sm" style="background: linear-gradient(135deg, #e52d27, #b31217);">
+                    <div class="fw-bold fs-5 mb-1">💻 Quản lý Điện tử</div>
+                    <small class="opacity-75">Xem, thêm thiết bị, chỉnh sửa thông tin đồ điện tử</small>
+                </a>
+                
+                <a href="/customers/" class="btn quick-btn py-3 text-start text-white shadow-sm" style="background: linear-gradient(135deg, #ffaa00, #ffc107);">
+                    <div class="fw-bold fs-5 mb-1">👥 Quản lý Khách hàng</div>
+                    <small class="opacity-75">Xem danh sách, hồ sơ và giỏ hàng của khách</small>
+                </a>
+
+                <a href="/publishers/" class="btn quick-btn py-3 text-start text-white shadow-sm" style="background: linear-gradient(135deg, #ff5722, #ff8a65);">
+                    <div class="fw-bold fs-5 mb-1">🏢 Quản lý Nhà xuất bản</div>
+                    <small class="opacity-75">Thêm, chỉnh sửa thông tin các NXB liên kết</small>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recommended_books %}
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--primary-light);">
+                <span class="fw-bold" style="color: var(--primary-color);"><i class="bi bi-star-fill"></i> Gợi ý cho bạn</span>
+                <span class="badge" style="background: var(--primary-light); color: var(--primary-color);">{{ recommended_books|length }} cuốn</span>
+            </div>
+            <div class="card-body" style="background-color: #fafafa;">
+                <div class="row g-3">
+                    {% for b in recommended_books %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">{{ b.title }}</div>
+                                    <div class="text-secondary small fw-semibold">{{ b.author }}</div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="mb-3">
+                                        <span class="badge py-2 px-3" style="background: var(--primary-light); color: var(--primary-color); font-size: 0.95rem; font-weight: 700;">
+                                            {{ b.price|floatformat:0 }} ₫
+                                        </span>
+                                    </div>
+                                    <a href="/books/{{ b.id }}/" class="btn btn-sm btn-outline-primary w-100 py-2">Xem chi tiết</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

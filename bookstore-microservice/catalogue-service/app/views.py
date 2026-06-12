@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-BOOK_SERVICE_URL = "http://book-service:8000"
+BOOK_SERVICE_URL = "http://product-service:8000"
 REVIEW_SERVICE_URL = "http://review-service:8000"
 
 

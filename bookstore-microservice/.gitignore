@@ -1,34 +1,84 @@
-# Python
+# ==========================================
+# 🐍 Python / Django Cache & Compiled Files
+# ==========================================
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 *.pyd
-
-# Virtualenvs
-venv/
-*/venv/
-.venv/
-
-# Django SQLite databases (per service)
-data/
-
-# Byte-compiled / cache
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
 .mypy_cache/
 .pytest_cache/
+.cache/
 
-# Environment / secrets
+# ==========================================
+# 📁 Virtual Environments (Local python environments)
+# ==========================================
+venv/
+.venv/
+env/
+ENV/
+*/venv/
+*/.venv/
+*/env/
+venv.bak/
+env.bak/
+
+# ==========================================
+# 🔑 Environment Variables & Sensitive Secrets
+# ==========================================
 .env
+.env.local
+.env.*.local
 *.env
+.private_key
+*.pem
+*.key
+credentials.json
 
-# IDE / editor
+# ==========================================
+# 💾 Databases (Local testing databases & storage)
+# ==========================================
+*.sqlite3
+db.sqlite3
+data/
+db_data/
+mysql_data/
+postgres_data/
+neo4j_data/
+
+# ==========================================
+# 📝 System logs & Diagnostic reports
+# ==========================================
+*.log
+logs/
+django_logs/
+nginx_logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==========================================
+# 💻 IDE & Editor specific settings
+# ==========================================
 .vscode/
 .idea/
 *.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Node / mermaid-cli cache
+# ==========================================
+# 📦 Node / Frontend Package Cache
+# ==========================================
 node_modules/
-npm-debug.log*
-
-# Docker
-*.log
-
+.npm/
+.eslintcache

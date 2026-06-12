@@ -39,7 +39,7 @@ function setLoading() {
 }
 
 // ─── Router ────────────────────────────────────────────────
-const routes = { dashboard, patients, appointments, prescriptions, bills, inventory };
+const routes = { dashboard, patients, doctors, appointments, prescriptions, bills, inventory };
 
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el => {

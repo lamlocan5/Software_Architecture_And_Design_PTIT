@@ -8,9 +8,7 @@ from .models import Cart, CartItem
 from .serializers import CartSerializer, CartItemSerializer
 import requests
 
-BOOK_SERVICE_URL = "http://book-service:8000"
-CLOTHE_SERVICE_URL = "http://clothe-service:8000"
-ELECTRONIC_SERVICE_URL = "http://electronic-service:8000"
+PRODUCT_SERVICE_URL = "http://product-service:8000"
 
 
 class CartCreate(APIView):
@@ -32,78 +30,91 @@ class AddCartItem(APIView):
         book_id = data.get("book_id")
         clothing_id = data.get("clothing_id")
         electronic_id = data.get("electronic_id")
+        product_id = data.get("product_id")
 
-        if not book_id and not clothing_id and not electronic_id:
-            return Response({"error": "book_id, clothing_id hoặc electronic_id là bắt buộc"}, status=status.HTTP_400_BAD_REQUEST)
+        # Fallback mappings for backward compatibility
+        if not product_id:
+            if book_id and int(book_id) > 0:
+                product_id = book_id
+            elif clothing_id:
+                product_id = clothing_id
+            elif electronic_id:
+                product_id = electronic_id
 
-        # Validate book nếu có
-        if book_id:
-            try:
-                book_id_int = int(book_id)
-            except (ValueError, TypeError):
-                return Response({"error": "book_id không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
-            r = requests.get(f"{BOOK_SERVICE_URL}/books/")
-            books = r.json()
-            if not any(b.get("id") == book_id_int for b in books if isinstance(b, dict)):
-                return Response({"error": "Book not found"}, status=status.HTTP_400_BAD_REQUEST)
-            data["book_id"] = book_id_int
-        else:
-            # DB hiện vẫn có ràng buộc NOT NULL với book_id trên một số môi trường,
-            # nên dùng 0 làm giá trị "không phải sách" thay vì NULL.
-            data["book_id"] = 0
+        if not product_id:
+            return Response({"error": "product_id, book_id, clothing_id hoặc electronic_id là bắt buộc"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate clothing nếu có
-        if clothing_id:
-            try:
-                clothing_id_int = int(clothing_id)
-            except (ValueError, TypeError):
-                return Response({"error": "clothing_id không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
-            try:
-                r = requests.get(f"{CLOTHE_SERVICE_URL}/clothes/")
-                clothes = r.json()
-            except Exception:
-                clothes = []
-            if not any(c.get("id") == clothing_id_int for c in clothes if isinstance(c, dict)):
-                return Response({"error": "Clothing not found"}, status=status.HTTP_400_BAD_REQUEST)
-            data["clothing_id"] = clothing_id_int
-        else:
-            data["clothing_id"] = None
+        try:
+            product_id_int = int(product_id)
+        except (ValueError, TypeError):
+            return Response({"error": "product_id không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate electronic nếu có
-        if electronic_id:
-            try:
-                electronic_id_int = int(electronic_id)
-            except (ValueError, TypeError):
-                return Response({"error": "electronic_id không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
-            try:
-                r = requests.get(f"{ELECTRONIC_SERVICE_URL}/electronics/")
-                electronics = r.json()
-            except Exception:
-                electronics = []
-            if not any(e.get("id") == electronic_id_int for e in electronics if isinstance(e, dict)):
-                return Response({"error": "Electronic not found"}, status=status.HTTP_400_BAD_REQUEST)
-            data["electronic_id"] = electronic_id_int
-        else:
-            data["electronic_id"] = None
+        # Validate with unified product-service
+        try:
+            r = requests.get(f"{PRODUCT_SERVICE_URL}/products/{product_id_int}/", timeout=3)
+            if r.status_code != 200:
+                return Response({"error": "Product not found"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            pass
 
+        data["product_id"] = product_id_int
         serializer = CartItemSerializer(data=data)
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ViewCart(APIView):
 
     def get(self, request, customer_id):
-
-        cart = Cart.objects.get(customer_id=customer_id)
+        try:
+            cart = Cart.objects.get(customer_id=customer_id)
+        except Cart.DoesNotExist:
+            return Response([])
 
         items = CartItem.objects.filter(cart=cart)
+        serialized_items = []
 
-        serializer = CartItemSerializer(items, many=True)
+        for item in items:
+            item_data = CartItemSerializer(item).data
+            # Set default backward compatible fields to None or 0
+            item_data["book_id"] = 0
+            item_data["clothing_id"] = None
+            item_data["electronic_id"] = None
 
-        return Response(serializer.data)
+            # Fetch product type from product-service to map
+            product_id = item.product_id
+            if product_id:
+                try:
+                    r = requests.get(f"{PRODUCT_SERVICE_URL}/products/{product_id}/", timeout=2)
+                    if r.status_code == 200:
+                        prod = r.json()
+                        prod_type = prod.get("product_type")
+                        
+                        # Set corresponding ID based on type
+                        if prod_type == "book" or "title" in prod:
+                            item_data["book_id"] = product_id
+                        elif prod_type == "clothing" or "clothing_id" in prod:
+                            item_data["clothing_id"] = product_id
+                        elif prod_type == "electronic" or "electronic_id" in prod:
+                            item_data["electronic_id"] = product_id
+                except Exception:
+                    # Fallback
+                    item_data["book_id"] = product_id
+
+            serialized_items.append(item_data)
+
+        return Response(serialized_items)
+
+    def delete(self, request, customer_id):
+        try:
+            cart = Cart.objects.get(customer_id=customer_id)
+            CartItem.objects.filter(cart=cart).delete()
+            return Response({"message": "Cart cleared"}, status=status.HTTP_200_OK)
+        except Cart.DoesNotExist:
+            return Response({"error": "Cart not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CartByCustomer(APIView):

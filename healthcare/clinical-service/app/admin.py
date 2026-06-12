@@ -4,7 +4,7 @@ from .models import Appointment, Prescription, PrescriptionItem
 
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'patient_id', 'doctor_name', 'scheduled_at', 'status', 'created_at']
+    list_display = ['id', 'patient_id', 'doctor_id', 'scheduled_at', 'status', 'created_at']
     list_filter = ['status']
 
 

@@ -40,6 +40,24 @@ class OrderCreate(APIView):
                 price_at_order=item['price_at_order'],
             )
 
+        # Publish order_created event asynchronously for notifications
+        try:
+            from .event_broker import publish_event
+            publish_event('order_created', {
+                'order_id': order.id,
+                'customer_id': customer_id,
+                'total_amount': float(total_amount),
+                'items': [
+                    {
+                        'book_id': item['book_id'],
+                        'quantity': item['quantity'],
+                        'price_at_order': float(item['price_at_order'])
+                    } for item in items
+                ]
+            })
+        except Exception as e:
+            print(f"[Order Service] Failed to publish order_created: {e}")
+
         serializer = OrderDetailSerializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

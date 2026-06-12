@@ -1,222 +1,164 @@
-## Tổng quan API các microservice
+## Tổng quan API các microservices
 
-Tài liệu này tóm tắt nhanh các endpoint chính (REST) của từng service. Chi tiết schema tham khảo trong các file OpenAPI tại `docs/api/openapi/*.yaml`.
-
----
-
-## Book Service (`book-service:8000`)
-
-- `GET /books/`  
-  - Mô tả: Lấy danh sách tất cả sách.  
-  - Response: `200 OK` – mảng `Book`.
-
-- `POST /books/`  
-  - Mô tả: Tạo sách mới.  
-  - Body (JSON, ví dụ):
-    ```json
-    {
-      "title": "Python Cơ Bản",
-      "author": "Nguyễn Văn A",
-      "price": 149000,
-      "stock": 10,
-      "publisher": 2
-    }
-    ```
-
-- `GET /publishers/` – danh sách NXB.  
-- `POST /publishers/` – tạo NXB.  
-- `GET /publishers/{id}/` – chi tiết NXB.  
-- `PUT /publishers/{id}/` – cập nhật.  
-- `DELETE /publishers/{id}/` – xoá.
+Tài liệu này tóm tắt danh sách các endpoint chính (REST) của từng service phục vụ trong hệ thống Bookstore Microservices.
 
 ---
 
-## Customer Service (`customer-service:8000`)
+## 🚪 API Entrypoints (Qua Nginx Gateway — Host Port `8000`)
 
-- `GET /customers/`  
-  - Lấy danh sách khách hàng.
+Mọi yêu cầu từ ngoài hệ thống cần được gửi qua Nginx Gateway trên cổng `8000`.
 
-- `POST /customers/`  
-  - Tạo khách hàng mới **và tự động tạo giỏ hàng** bên `cart-service`.
-  - Body ví dụ:
-    ```json
-    { "name": "Nguyễn Văn B", "email": "user@example.com" }
-    ```
+- **`/`**: Chuyển tiếp tới giao diện HTML (`frontend`).
+- **`/api/gateway/`**: Chuyển tiếp tới BFF API gateway (`api-gateway`).
+  - `/api/gateway/home/` - Lấy thông tin trang chủ/dashboard tổng hợp.
+  - `/api/gateway/catalogue/` - Lấy danh mục sản phẩm tổng hợp.
+  - `/api/gateway/cart/<customer_id>/` - Xem giỏ hàng.
+  - `/api/gateway/checkout/<customer_id>/` - Đặt hàng từ giỏ.
+  - `/api/gateway/orders/<order_id>/` - Xem chi tiết đơn hàng.
+  - `/api/gateway/notifications/` - Nhật ký thông báo của admin.
+  - `/api/gateway/notifications/<customer_id>/` - Nhật ký thông báo của khách hàng.
+- **`/api/notifications/`**: Chuyển tiếp tới `notification-service`.
 
 ---
 
-## Cart Service (`cart-service:8000`)
+## 👤 User Service (`user-service:8001`)
 
-- `POST /carts/`  
-  - Tạo giỏ hàng cho `customer_id`.
-  - Body: `{ "customer_id": 1 }`.
+Quản lý thông tin tài khoản Khách hàng (Customer), Nhân viên (Staff), Quản lý (Manager).
 
-- `POST /carts/add-item/`  
-  - Thêm sách vào giỏ.
+### Customers
+- `GET /customers/` — Lấy danh sách khách hàng.
+- `POST /customers/` — Đăng ký khách hàng mới (phát event `customer_created`).
+  - Body: `{"name": "Nguyễn Văn A", "email": "nguyenvana@email.com", "password": "customer123"}`
+- `GET /customers/{id}/` — Chi tiết khách hàng.
+
+### Staff
+- `GET /staff/` — Danh sách nhân viên.
+- `POST /staff/` — Tạo nhân viên mới.
+- `PATCH /staff/{id}/` — Cập nhật nhân viên.
+- `DELETE /staff/{id}/` — Xóa nhân viên.
+
+### Managers
+- `GET /managers/` — Danh sách quản lý.
+- `POST /managers/` — Tạo quản lý mới.
+- `PATCH /managers/{id}/` — Cập nhật quản lý.
+- `DELETE /managers/{id}/` — Xóa quản lý.
+
+---
+
+## 📦 Product Service (`product-service:8002`)
+
+Quản lý sản phẩm thuộc các dòng khác nhau (Sách, Quần áo, Đồ điện tử).
+
+### Products
+- `GET /products/` — Lấy toàn bộ danh sách sản phẩm.
+- `POST /products/` — Thêm sản phẩm mới.
+  - Body: `{"name": "Áo khoác gió", "product_type": "clothing", "price": 450000, "stock": 20, "attributes": {"size": "XL", "color": "Đen"}}`
+- `GET /products/{id}/` — Chi tiết sản phẩm.
+
+### Publishers
+- `GET /publishers/` — Danh sách NXB.
+- `POST /publishers/` — Tạo NXB.
+- `GET /publishers/{id}/` — Chi tiết NXB.
+- `PUT /publishers/{id}/` — Cập nhật NXB.
+- `DELETE /publishers/{id}/` — Xóa NXB.
+
+### Categories
+- `GET /categories/` — Danh sách các danh mục.
+
+---
+
+## 🛒 Cart Service (`cart-service:8003`)
+
+Quản lý giỏ hàng của khách hàng.
+
+- `POST /carts/` — Khởi tạo giỏ hàng cho `customer_id`.
+  - Body: `{"customer_id": 1}`
+- `GET /carts/{customer_id}/` — Xem chi tiết items trong giỏ hàng.
+- `GET /carts/customer/{customer_id}/` — Lấy thông tin giỏ hàng tổng thể.
+- `POST /carts/add-item/` — Thêm sản phẩm vào giỏ hàng.
+  - Body: `{"cart": 1, "book_id": 2, "quantity": 1}`
+
+---
+
+## 📋 Order Service (`order-service:8004`)
+
+Quản lý đơn hàng và dòng đơn hàng.
+
+- `GET /orders/` — Danh sách đơn hàng toàn hệ thống.
+- `POST /orders/create/` — Tạo đơn hàng mới từ giỏ hàng (phát event `order_created`).
   - Body:
     ```json
-    { "cart": 1, "book_id": 5, "quantity": 2 }
-    ```
-
-- `GET /carts/{customer_id}/`  
-  - Xem chi tiết items trong giỏ của `customer_id`.
-
-- `GET /carts/customer/{customer_id}/`  
-  - Lấy thông tin giỏ (bao gồm `id`) từ customer.
-
----
-
-## Order Service (`order-service:8000`)
-
-- `GET /orders/`  
-  - Lấy danh sách tất cả đơn hàng.
-
-- `POST /orders/create/`  
-  - Tạo đơn hàng mới từ giỏ.
-  - Body ví dụ:
-    ```json
     {
-      "customer_id": 1,
-      "total_amount": 500000,
-      "items": [
-        { "book_id": 5, "quantity": 2, "price_at_order": 150000 },
-        { "book_id": 7, "quantity": 1, "price_at_order": 200000 }
-      ]
+      "customer_id": 6,
+      "total_amount": 86000,
+      "items": [{"book_id": 1, "quantity": 1, "price_at_order": 86000}]
     }
     ```
-
-- `GET /orders/{order_id}/` – chi tiết đơn.  
-- `PATCH /orders/{order_id}/status/` – cập nhật trạng thái đơn (pending/confirmed/shipping/delivered/cancelled).  
-- `GET /orders/customer/{customer_id}/` – danh sách đơn của 1 khách.
-
----
-
-## Review Service (`review-service:8000`)
-
-- `GET /reviews/` – danh sách đánh giá.  
-- `POST /reviews/` – tạo đánh giá mới:
-  ```json
-  {
-    "book_id": 5,
-    "customer_id": 1,
-    "customer_name": "Nguyễn Văn B",
-    "book_title": "Python Cơ Bản",
-    "rating": 5,
-    "comment": "Rất hay!"
-  }
-  ```
-
-- `GET /reviews/book/{book_id}/` – tất cả review cho 1 sách.  
-- `GET /reviews/stats/{book_id}/` – thống kê `avg_rating`, `total_reviews` cho sách.
+- `GET /orders/{order_id}/` — Chi tiết đơn hàng.
+- `PATCH /orders/{order_id}/status/` — Cập nhật trạng thái đơn hàng (`pending`, `confirmed`, `shipping`, `delivered`, `cancelled`).
+- `GET /orders/customer/{customer_id}/` — Đơn hàng theo khách hàng.
 
 ---
 
-## Pay Service (`pay-service:8000`)
+## ⭐ Review Service (`review-service:8005`)
 
-- `GET /payments/` – danh sách payment.  
-- `POST /payments/create/` – tạo payment:
-  ```json
-  {
-    "order_id": 10,
-    "customer_id": 1,
-    "amount": 500000,
-    "method": "cod"
-  }
-  ```
+Quản lý đánh giá sản phẩm.
 
-- `GET /payments/{payment_id}/` – chi tiết payment.  
-- `PATCH /payments/{payment_id}/status/` – cập nhật trạng thái (initiated/paid/failed/refunded/cancelled).  
-- `GET /payments/order/{order_id}/` – payments theo đơn.  
-- `GET /payments/customer/{customer_id}/` – payments theo khách.
+- `GET /reviews/` — Danh sách đánh giá.
+- `POST /reviews/` — Tạo đánh giá mới.
+- `GET /reviews/book/{book_id}/` — Đánh giá theo sản phẩm.
+- `GET /reviews/stats/{book_id}/` — Thống kê rating trung bình và tổng số đánh giá.
 
 ---
 
-## Ship Service (`ship-service:8000`)
+## 🚚 Shipping Service (`shipping-service:8006`)
 
-- `GET /shipments/` – danh sách shipment.  
-- `POST /shipments/create/` – tạo shipment:
-  ```json
-  {
-    "order_id": 10,
-    "customer_id": 1,
-    "receiver_name": "Nguyễn Văn B",
-    "phone": "0901234567",
-    "address": "Số 1, Q.1, TP.HCM",
-    "carrier": "ghn"
-  }
-  ```
+Quản lý quá trình giao vận đơn hàng.
 
-- `GET /shipments/{shipment_id}/` – chi tiết shipment.  
-- `PATCH /shipments/{shipment_id}/status/` – cập nhật trạng thái (pending/picked/shipping/delivered/failed/cancelled).  
-- `GET /shipments/order/{order_id}/` – shipment theo order.  
-- `GET /shipments/customer/{customer_id}/` – shipment theo customer.
+- `GET /shipments/` — Danh sách vận đơn.
+- `POST /shipments/` — Tạo vận đơn mới.
+- `GET /shipments/{id}/` — Chi tiết vận đơn.
+- `PATCH /shipments/{id}/status/` — Cập nhật trạng thái vận chuyển (phát event `shipment_updated`).
+  - Trạng thái: `pending`, `picked`, `shipping`, `delivered`, `failed`, `cancelled`
 
 ---
 
-## Catalogue Service (`catalogue-service:8000`)
+## 💳 Payment Service (`payment-service:8007`)
 
-- `GET /catalog/books/`  
-  - Lấy danh sách sách đã ghép `avg_rating` và `total_reviews`.
+Quản lý các giao dịch thanh toán hóa đơn.
 
-- `GET /catalog/books/{id}/`  
-  - Chi tiết 1 sách (có cả rating).
-
----
-
-## Staff Service (`staff-service:8000`)
-
-- `GET /staff/` – danh sách staff.  
-- `POST /staff/` – tạo staff mới:
-  ```json
-  { "name": "Nguyễn Văn Staff", "email": "staff@example.com" }
-  ```
-
-- `PATCH /staff/{id}/` – cập nhật một phần (name, email, active).  
-- `DELETE /staff/{id}/` – xoá staff.
+- `GET /payments/` — Danh sách giao dịch.
+- `POST /payments/` — Khởi tạo thanh toán mới.
+- `GET /payments/{id}/` — Chi tiết giao dịch thanh toán.
+- `PATCH /payments/{payment_id}/status/` — Cập nhật trạng thái thanh toán (phát event `payment_processed`).
+  - Body: `{"status": "paid"}`
 
 ---
 
-## Manager Service (`manager-service:8000`)
+## 🗂️ Catalogue Service (`catalogue-service:8008`)
 
-- `GET /managers/` – danh sách manager.  
-- `POST /managers/` – tạo manager mới:
-  ```json
-  { "name": "Nguyễn Văn Manager", "email": "manager@example.com" }
-  ```
+Service tổng hợp dữ liệu sản phẩm cùng với điểm đánh giá rating tương ứng.
 
-- `PATCH /managers/{id}/` – cập nhật name/email/active.  
-- `DELETE /managers/{id}/` – xoá manager.
+- `GET /catalog/books/` — Danh sách sách có kèm thống kê đánh giá.
+- `GET /catalog/books/{id}/` — Chi tiết một sách có kèm thống kê đánh giá.
 
 ---
 
-## Recommender-AI Service (`recommender-ai-service:8000`)
+## 🔔 Notification Service (`notification-service:8009`)
 
-- `POST /recommendations/`  
-  - Mô tả: Dựa trên danh sách sách (từ `catalogue-service`), chọn ra một số ID sách gợi ý.  
-  - Body ví dụ:
-    ```json
-    {
-      "context": "home",
-      "limit": 6,
-      "books": [
-        {
-          "id": 5,
-          "title": "Python Cơ Bản",
-          "author": "Nguyễn Văn A",
-          "price": 149000,
-          "stock": 10,
-          "publisher": "NXB Trẻ",
-          "avg_rating": 4.5,
-          "total_reviews": 12
-        }
-      ]
-    }
-    ```
-  - Response:
-    ```json
-    {
-      "recommended_ids": [5, 7, 3],
-      "source": "gemini"
-    }
-    ```
+Ghi nhật ký thông báo tự động cho khách hàng.
 
+- `GET /notifications/` — Danh sách toàn bộ thông báo hệ thống (Dành cho Admin).
+- `GET /notifications/customer/{customer_id}/` — Danh sách thông báo theo khách hàng.
+- `POST /notifications/` — Tạo thông báo thủ công.
+
+---
+
+## 🤖 AI Service (`ai-service:8011`)
+
+Gợi ý sản phẩm thông minh và chatbot tư vấn bán hàng.
+
+- `GET /recommend/` — Gợi ý sản phẩm Hybrid (PyTorch LSTM + Neo4j Graph Path + FAISS Similarity).
+- `POST /behavior/` — Ghi nhận hành vi người dùng (view, cart, buy) theo thời gian thực để đồng bộ vào PostgreSQL và Neo4j.
+- `POST /chatbot/` — Chatbot RAG hỗ trợ tư vấn sản phẩm thông minh (Sách, Quần áo, Điện tử) sử dụng FAISS + Gemini 3.5 Flash.
+- `POST /recommendations/` — Gợi ý sản phẩm thông minh legacy qua Gemini API hoặc thuật toán fallback.

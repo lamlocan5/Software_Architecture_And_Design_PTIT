@@ -1,9 +1,14 @@
 *.rar
 2. SystemAnalysisDesignObjectOrientedOpproach-2015.pdf
 
-# Python
+# ==========================================
+# 🐍 Python / Django Cache & Compiled Files
+# ==========================================
+__pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 *.so
 .Python
 build/
@@ -24,25 +29,70 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.mypy_cache/
+.pytest_cache/
+.cache/
+.coverage
+htmlcov/
+.tox/
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-/media
-/staticfiles
-/static
-
-# Virtual Environment
+# ==========================================
+# 📁 Virtual Environments (Local python environments)
+# ==========================================
 venv/
+.venv/
 env/
 ENV/
-env.bak/
+*/venv/
+*/.venv/
+*/env/
 venv.bak/
-.venv/
+env.bak/
 
-# IDEs
+# ==========================================
+# 🔑 Environment Variables & Sensitive Secrets
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.env
+.private_key
+*.pem
+*.key
+credentials.json
+local_settings.py
+
+# ==========================================
+# 💾 Databases (Local testing databases & storage)
+# ==========================================
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+*.sqlite
+*.db
+data/
+db_data/
+mysql_data/
+postgres_data/
+neo4j_data/
+mysql-data/
+*.dump
+
+# ==========================================
+# 📝 System logs & Diagnostic reports
+# ==========================================
+*.log
+logs/
+django_logs/
+nginx_logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==========================================
+# 💻 IDE & Editor specific settings
+# ==========================================
 .vscode/
 .idea/
 *.swp
@@ -53,65 +103,38 @@ venv.bak/
 .settings/
 *.sublime-project
 *.sublime-workspace
-
-# OS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
 Thumbs.db
+ehthumbs.db
 Desktop.ini
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
-# Database
-*.sql
-*.sqlite
-*.db
-mysql-data/
-*.dump
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Migrations (optional - uncomment if you want to ignore)
-# */migrations/*.py
-# !*/migrations/__init__.py
-
-# Cache
-__pycache__/
-*.pyc
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.cache
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Node modules (if using any frontend tools)
+# ==========================================
+# 📦 Node / Frontend Package Cache
+# ==========================================
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.npm/
+.eslintcache
 package-lock.json
 yarn.lock
 
-# Compiled files
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
+# ==========================================
+# 📝 Custom compiled code texts
+# ==========================================
+all_code.txt
+*code.txt
+docs/PROJECT_DUMP.txt
+*PROJECT_DUMP.txt
 
-# Documentation
-docs/_build/
-site/
-
+# ==========================================
+# 🎓 Student Assignment Files (Preserved)
+# ==========================================
 *.docx
 ass04_04.03_lamdn.pdf
 ass03_04.03_lamdn.pdf

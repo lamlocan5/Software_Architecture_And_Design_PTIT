@@ -23,6 +23,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         patient_id = self.request.query_params.get('patient_id')
         if patient_id:
             queryset = queryset.filter(patient_id=patient_id)
+        doctor_id = self.request.query_params.get('doctor_id')
+        if doctor_id:
+            queryset = queryset.filter(doctor_id=doctor_id)
         return queryset
 
 
