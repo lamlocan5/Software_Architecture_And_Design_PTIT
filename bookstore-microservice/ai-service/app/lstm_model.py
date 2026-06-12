@@ -40,7 +40,7 @@ def get_model_path():
     return os.path.join(data_dir, 'lstm_model.pt')
 
 
-def train_lstm_model(behaviors=None, num_epochs=5, batch_size=8):
+def train_lstm_model(behaviors=None, num_epochs=5, batch_size=8, return_losses=False):
     """
     Train the LSTM model on interaction sequences.
     If behaviors is empty/None, generates synthetic interaction patterns to bootstrap training.
@@ -91,6 +91,7 @@ def train_lstm_model(behaviors=None, num_epochs=5, batch_size=8):
     # Training Loop
     model.train()
     dataset_size = len(X_train)
+    epoch_losses = []
     for epoch in range(num_epochs):
         epoch_loss = 0
         permutation = torch.randperm(dataset_size)
@@ -104,12 +105,17 @@ def train_lstm_model(behaviors=None, num_epochs=5, batch_size=8):
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item() * len(batch_x)
-        print(f"Epoch {epoch+1}/{num_epochs} Loss: {epoch_loss/dataset_size:.4f}")
+        avg_loss = epoch_loss/dataset_size
+        epoch_losses.append(avg_loss)
+        print(f"Epoch {epoch+1}/{num_epochs} Loss: {avg_loss:.4f}")
         
     # Save the model
     model_path = get_model_path()
     torch.save(model.state_dict(), model_path)
     print(f"LSTM model saved successfully to {model_path}!")
+    
+    if return_losses:
+        return model, epoch_losses
     return model
 
 

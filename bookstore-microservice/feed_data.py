@@ -31,9 +31,19 @@ if os.path.exists('.env'):
                     db_user = val
                 elif key == 'DB_PASSWORD':
                     db_password = val
+                elif key == 'MYSQL_HOST':
+                    mysql_host = val
+                elif key == 'MYSQL_PORT':
+                    mysql_port = int(val)
+                elif key == 'MYSQL_USER':
+                    mysql_user = val
+                elif key == 'MYSQL_PASSWORD':
+                    mysql_password = val
 
 if db_host == 'host.docker.internal':
     db_host = 'localhost'
+if mysql_host == 'host.docker.internal':
+    mysql_host = 'localhost'
 
 try:
     import psycopg2

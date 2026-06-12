@@ -9,11 +9,11 @@ REM Step 1: Check Docker is running
 echo [1/4] Checking Docker status...
 docker info > nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Docker is not running! Please start Docker Desktop first.
-    pause
-    exit /b 1
+    echo [WARNING] Docker might not be running or is not responding.
+    echo Trying to proceed anyway...
+) else (
+    echo [OK] Docker is running.
 )
-echo [OK] Docker is running.
 echo.
 
 REM Step 2: Create databases on PostgreSQL and MySQL
@@ -21,10 +21,10 @@ echo [2/4] Creating databases on PostgreSQL and MySQL...
 python create_databases.py
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to create databases!
-    echo Make sure PostgreSQL (port 5432) and MySQL (port 3306) are running.
+    echo Make sure PostgreSQL on port 5432 and MySQL on port 3306 are running.
     echo Check your .env file for correct DB credentials.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 echo [OK] Databases ready.
 echo.
@@ -36,14 +36,14 @@ if %errorlevel% neq 0 (
     echo [ERROR] Failed to start Docker Compose!
     echo Run "docker compose logs" to see error details.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 echo [OK] All containers started.
 echo.
 
 REM Wait for services to initialize and run Django migrations
 echo Waiting 20 seconds for services to initialize and run migrations...
-timeout /t 20 /nobreak
+ping 127.0.0.1 -n 21 > nul
 echo.
 
 REM Step 4: Feed Vietnamese sample data

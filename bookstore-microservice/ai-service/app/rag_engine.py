@@ -69,15 +69,23 @@ class RAGEngine:
         """
         import requests
         
+        host_catalog = "catalogue-service:8000"
+        host_product = "product-service:8000"
+        
+        db_host = os.environ.get('DB_HOST', '')
+        if db_host in ('127.0.0.1', 'localhost'):
+            host_catalog = "localhost:8008"
+            host_product = "localhost:8002"
+
         # 1. Fetch Books
         books = []
         try:
-            r = requests.get("http://catalogue-service:8000/catalog/books/", timeout=2)
+            r = requests.get(f"http://{host_catalog}/catalog/books/", timeout=2)
             if r.status_code == 200:
                 books = r.json()
         except Exception:
             try:
-                r = requests.get("http://product-service:8000/books/", timeout=2)
+                r = requests.get(f"http://{host_product}/books/", timeout=2)
                 if r.status_code == 200:
                     books = r.json()
             except Exception:
@@ -86,7 +94,7 @@ class RAGEngine:
         # 2. Fetch Clothes
         clothes = []
         try:
-            r = requests.get("http://product-service:8000/clothes/", timeout=2)
+            r = requests.get(f"http://{host_product}/clothes/", timeout=2)
             if r.status_code == 200:
                 clothes = r.json()
         except Exception:
@@ -95,7 +103,7 @@ class RAGEngine:
         # 3. Fetch Electronics
         electronics = []
         try:
-            r = requests.get("http://product-service:8000/electronics/", timeout=2)
+            r = requests.get(f"http://{host_product}/electronics/", timeout=2)
             if r.status_code == 200:
                 electronics = r.json()
         except Exception:

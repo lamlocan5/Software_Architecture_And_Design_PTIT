@@ -26,17 +26,27 @@ def run_bootstrap_sync():
             print(f"Error rebuilding FAISS index: {e}")
         return
 
+    host_catalog = "catalogue-service:8000"
+    host_product = "product-service:8000"
+    host_review = "review-service:8000"
+    
+    db_host = os.environ.get('DB_HOST', '')
+    if db_host in ('127.0.0.1', 'localhost'):
+        host_catalog = "localhost:8008"
+        host_product = "localhost:8002"
+        host_review = "localhost:8005"
+
     # 1. Fetch books from catalogue-service
     books = []
     try:
-        r = requests.get("http://catalogue-service:8000/catalog/books/", timeout=10)
+        r = requests.get(f"http://{host_catalog}/catalog/books/", timeout=10)
         if r.status_code == 200:
             books = r.json()
             print(f"Successfully fetched {len(books)} books from catalogue-service.")
     except Exception as e:
         print(f"Failed to fetch from catalogue-service: {e}. Trying product-service...")
         try:
-            r = requests.get("http://product-service:8000/books/", timeout=10)
+            r = requests.get(f"http://{host_product}/books/", timeout=10)
             if r.status_code == 200:
                 books = r.json()
                 print(f"Successfully fetched {len(books)} books from product-service.")
@@ -118,7 +128,7 @@ def run_bootstrap_sync():
     # 3. Fetch reviews from review-service and sync as VIEW behaviors
     reviews = []
     try:
-        r = requests.get("http://review-service:8000/reviews/", timeout=10)
+        r = requests.get(f"http://{host_review}/reviews/", timeout=10)
         if r.status_code == 200:
             reviews = r.json()
             print(f"Successfully fetched {len(reviews)} reviews from review-service.")

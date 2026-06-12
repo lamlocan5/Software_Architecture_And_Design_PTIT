@@ -258,3 +258,77 @@ class Recommendations(APIView):
 
         fallback = _fallback_recommendations(compact, limit)
         return Response({"recommended_ids": fallback, "source": "fallback"})
+
+
+class GraphDataView(APIView):
+    """
+    GET /graph/
+    Retrieve Neo4j graph nodes, relationships, and stats.
+    """
+    def get(self, request):
+        graph = None
+        try:
+            graph = Neo4jGraphEngine()
+            if not graph.driver:
+                return Response(
+                    {"error": "Failed to connect to Neo4j database"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            node_stats = []
+            rel_stats = []
+            nodes = []
+            relationships = []
+
+            with graph.driver.session() as session:
+                # 1. Fetch node stats
+                node_stats_result = session.run("MATCH (n) RETURN labels(n)[0] AS label, count(n) AS count")
+                for row in node_stats_result:
+                    node_stats.append({
+                        "label": row["label"] or "Unknown",
+                        "count": row["count"]
+                    })
+
+                # 2. Fetch relationship stats
+                rel_stats_result = session.run("MATCH ()-[r]->() RETURN type(r) AS type, count(r) AS count")
+                for row in rel_stats_result:
+                    rel_stats.append({
+                        "type": row["type"],
+                        "count": row["count"]
+                    })
+
+                # 3. Fetch nodes (limit to 150)
+                nodes_result = session.run("MATCH (n) RETURN labels(n)[0] AS label, n.id AS id, properties(n) AS properties LIMIT 150")
+                for row in nodes_result:
+                    nodes.append({
+                        "label": row["label"] or "Unknown",
+                        "id": row["id"],
+                        "properties": row["properties"]
+                    })
+
+                # 4. Fetch relationships (limit to 150)
+                rels_result = session.run("MATCH (n)-[r]->(m) RETURN type(r) AS type, n.id AS source, m.id AS target, properties(r) AS properties LIMIT 150")
+                for row in rels_result:
+                    relationships.append({
+                        "type": row["type"],
+                        "source": row["source"],
+                        "target": row["target"],
+                        "properties": row["properties"]
+                    })
+
+            return Response({
+                "node_stats": node_stats,
+                "relationship_stats": rel_stats,
+                "nodes": nodes,
+                "relationships": relationships
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error querying Neo4j: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        finally:
+            if graph:
+                graph.close()
+

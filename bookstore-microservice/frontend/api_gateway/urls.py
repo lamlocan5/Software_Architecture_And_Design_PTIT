@@ -16,6 +16,7 @@ from api_gateway.views import (
     electronics_list,
     electronic_detail,
     notification_list,
+    graph_view,
 )
 from api_gateway.auth_views import login_view, logout_view, register_view
 
@@ -52,6 +53,8 @@ urlpatterns = [
     path('electronics/',                   electronics_list,   name='electronics_list'),
     path('electronics/<int:electronic_id>/', electronic_detail,  name='electronic_detail'),
     path('notifications/',                 notification_list,  name='notification_list'),
+    path('graph/',                         graph_view,         name='graph_view'),
+
 
     # Prometheus Metrics
     path('metrics/', metrics_view, name='prometheus_metrics'),

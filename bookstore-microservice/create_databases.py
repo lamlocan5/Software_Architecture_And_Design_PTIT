@@ -31,10 +31,20 @@ if os.path.exists('.env'):
                     db_user = val
                 elif key == 'DB_PASSWORD':
                     db_password = val
+                elif key == 'MYSQL_HOST':
+                    mysql_host = val
+                elif key == 'MYSQL_PORT':
+                    mysql_port = int(val)
+                elif key == 'MYSQL_USER':
+                    mysql_user = val
+                elif key == 'MYSQL_PASSWORD':
+                    mysql_password = val
 
 # When running on host, host.docker.internal translates to localhost
 if db_host == 'host.docker.internal':
     db_host = 'localhost'
+if mysql_host == 'host.docker.internal':
+    mysql_host = 'localhost'
 
 pg_databases = [
     "bookstore_gateway",
@@ -62,6 +72,8 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary"])
     import psycopg2
     from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+has_error = False
 
 try:
     conn = psycopg2.connect(
@@ -91,6 +103,7 @@ try:
     print("All PostgreSQL databases checked/created successfully!")
 except Exception as e:
     print(f"Error connecting to or creating databases on PostgreSQL: {e}")
+    has_error = True
 
 print("\n--- Checking MySQL Databases ---")
 print(f"Connecting to host MySQL at {mysql_host}:{mysql_port} as user '{mysql_user}'...")
@@ -130,3 +143,10 @@ try:
 except Exception as e:
     print(f"Error connecting to or creating databases on MySQL: {e}")
     print("Please make sure MySQL service is running on the host machine.")
+    has_error = True
+
+if has_error:
+    sys.exit(1)
+else:
+    sys.exit(0)
+

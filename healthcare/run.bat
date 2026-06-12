@@ -1,39 +1,41 @@
 @echo off
-chcp 65001 > nul
-echo === Kích hoạt Healthcare System ===
+echo ===========================================
+echo === Start Healthcare Microservices System ===
+echo ===========================================
 
-echo 0. Dọn dẹp các container cũ để tránh khóa cơ sở dữ liệu...
-docker compose down
+echo 1. Cleaning up old containers...
+docker compose down --remove-orphans
 
-echo 1. Khởi tạo cơ sở dữ liệu trên PostgreSQL...
+
+echo 2. Initializing PostgreSQL databases...
 python create_databases.py
 if %errorlevel% neq 0 (
-    echo [LỖI] Không thể tạo cơ sở dữ liệu!
+    echo [ERROR] Failed to create databases!
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 
-echo 2. Đang khởi dựng các container Docker và chạy migrations...
+echo 3. Building and launching Docker containers...
 docker compose up --build -d
 if %errorlevel% neq 0 (
-    echo [LỖI] Lỗi khi chạy docker compose!
+    echo [ERROR] Docker compose build/up failed!
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 
-echo Đang chờ các dịch vụ hoàn tất chạy migrations (15 giây)...
-timeout /t 15 /nobreak > nul
+echo Waiting for services migrations to complete (15 seconds)...
+ping 127.0.0.1 -n 16 > nul
 
-echo 3. Đang nạp dữ liệu mẫu (tiếng Việt)...
+echo 4. Seeding mock data...
 python feed_data.py
 if %errorlevel% neq 0 (
-    echo [LỖI] Không thể nạp dữ liệu mẫu!
+    echo [ERROR] Failed to seed mock data!
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 
-echo === Hệ thống khởi chạy thành công! ===
-echo Mở trình duyệt tại: http://localhost:8080/
+echo === System started successfully! ===
+echo Open browser at: http://localhost:8080/
 start http://localhost:8080/
 
 pause

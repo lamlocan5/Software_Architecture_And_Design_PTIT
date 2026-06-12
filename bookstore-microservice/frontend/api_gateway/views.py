@@ -1307,3 +1307,68 @@ def notification_list(request):
     })
 
 
+@login_required
+def graph_view(request):
+    if not (_is_admin(request.user) or _is_staff_user(request.user) or _is_manager(request.user)):
+        return redirect("home")
+
+    graph_data = _get(f"{RECOMMENDER_SERVICE_URL}/graph/", {})
+    if not isinstance(graph_data, dict):
+        graph_data = {}
+
+    customer_id = _get_customer_id(request.user)
+
+    # Fetch all items from catalogs to enrich Neo4j node details on the frontend
+    books = _get(f"{CATALOGUE_SERVICE_URL}/catalog/books/", [])
+    clothes = _get(f"{CLOTHE_SERVICE_URL}/clothes/", [])
+    electronics = _get(f"{ELECTRONIC_SERVICE_URL}/electronics/", [])
+
+    product_map = {}
+    for b in (books if isinstance(books, list) else []):
+        if isinstance(b, dict) and "id" in b:
+            product_map[str(b["id"])] = {
+                "title": b.get("title") or b.get("name") or f"Book #{b['id']}",
+                "category": "Book",
+                "price": b.get("price", 0),
+            }
+    for c in (clothes if isinstance(clothes, list) else []):
+        if isinstance(c, dict) and "id" in c:
+            product_map[str(c["id"])] = {
+                "title": c.get("name") or f"Clothing #{c['id']}",
+                "category": "Clothing",
+                "price": c.get("price", 0),
+            }
+    for e in (electronics if isinstance(electronics, list) else []):
+        if isinstance(e, dict) and "id" in e:
+            product_map[str(e["id"])] = {
+                "title": e.get("name") or f"Electronic #{e['id']}",
+                "category": "Electronics",
+                "price": e.get("price", 0),
+            }
+
+    # Convert to standard JSON strings to prevent quote/format errors in template JS
+    import json
+    node_stats_json = json.dumps(graph_data.get("node_stats", []))
+    rel_stats_json = json.dumps(graph_data.get("relationship_stats", []))
+    nodes_json = json.dumps(graph_data.get("nodes", []))
+    rels_json = json.dumps(graph_data.get("relationships", []))
+    product_map_json = json.dumps(product_map)
+
+    return render(request, "graph.html", {
+        "node_stats": graph_data.get("node_stats", []),
+        "relationship_stats": graph_data.get("relationship_stats", []),
+        "nodes": graph_data.get("nodes", []),
+        "relationships": graph_data.get("relationships", []),
+        "node_stats_json": node_stats_json,
+        "rel_stats_json": rel_stats_json,
+        "nodes_json": nodes_json,
+        "rels_json": rels_json,
+        "product_map_json": product_map_json,
+        "is_admin": _is_admin(request.user),
+        "is_staff_role": _is_staff_user(request.user),
+        "is_manager_role": _is_manager(request.user),
+        "user_customer_id": customer_id,
+    })
+
+
+
